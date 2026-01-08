@@ -1,0 +1,75 @@
+{
+  "name": "samsung-clp300-printer-manager",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Samsung CLP300 yazıcılar için özel yazdırma yöneticisi - Her sayfayı ayrı ve temiz yazdırma",
+  "author": {
+    "name": "Samsung CLP300 Manager"
+  },
+  "license": "MIT",
+  "main": "dist-electron/main.mjs",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"npm:dev:electron\"",
+    "dev:electron": "wait-on tcp:5173 && npm run build:electron && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
+    "build:electron": "node ./scripts/build-electron.mjs",
+    "build": "rimraf dist dist-electron && vite build && node ./scripts/build-electron.mjs",
+    "lint": "echo 'No linter configured'",
+    "postinstall": "electron-builder install-app-deps",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.samsungclp300.printermanager",
+    "productName": "Samsung CLP300 Yazıcı Yöneticisi",
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "node_modules/**",
+      "package.json"
+    ],
+    "extraResources": [],
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Samsung CLP300 Yazıcı Yöneticisi"
+    },
+    "asar": true
+  },
+  "dependencies": {
+    "electron-store": "^9.0.0",
+    "pdfjs-dist": "^4.6.82",
+    "pdf-lib": "^1.17.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^31.3.0",
+    "electron-builder": "^24.13.3",
+    "esbuild": "^0.21.5",
+    "rimraf": "^5.0.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2",
+    "vite-plugin-node-polyfills": "^0.24.0",
+    "wait-on": "^7.2.0"
+  }
+}
