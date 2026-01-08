@@ -2,6 +2,12 @@
 
 Samsung CLP300 model lazer yazıcılar için özel geliştirilmiş bir yazdırma yönetim uygulaması. Bu uygulama, yazıcının belt ünitesinin her sayfadan sonra temizlenmesini sağlayarak, art arda yapılan baskılarda lekeli çıktı sorununu çözer.
 
+## 📥 İndirme
+
+**[⬇️ Son Sürümü İndir (v1.0.0)](https://github.com/emregms/printer-manager/releases/latest)**
+
+> Exe dosyasını indirip doğrudan çalıştırabilirsiniz. Kurulum gerektirmez.
+
 ## Özellikler
 
 - **Sayfa Sayfa Yazdırma**: Her sayfayı ayrı bir yazdırma işi olarak gönderir
@@ -36,8 +42,8 @@ Samsung CLP300 model lazer yazıcılar için özel geliştirilmiş bir yazdırma
 
 ```bash
 # Projeyi klonlayın
-git clone https://github.com/kullaniciadi/samsung-clp300-printer-manager.git
-cd samsung-clp300-printer-manager
+git clone https://github.com/emregms/printer-manager.git
+cd printer-manager
 
 # Bağımlılıkları yükleyin
 npm install
