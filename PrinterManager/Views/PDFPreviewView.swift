@@ -4,9 +4,21 @@ import PDFKit
 struct PDFPreviewView: View {
     let pdfURL: URL?
     @EnvironmentObject var printManager: PrintManager
+    @EnvironmentObject var settingsStore: SettingsStore
     @State private var thumbnails: [Int: NSImage] = [:]
     @State private var totalPages: Int = 0
     @State private var isLoading: Bool = false
+    @State private var originalPageCount: Int = 0
+    
+    /// Çift yönlü mod açık ve sayfa sayısı tek ise boş sayfa gerekli
+    private var needsBlankPage: Bool {
+        settingsStore.duplexEnabled && originalPageCount > 0 && originalPageCount % 2 != 0
+    }
+    
+    /// Gösterilecek toplam sayfa (boş sayfa dahil)
+    private var displayPageCount: Int {
+        needsBlankPage ? originalPageCount + 1 : originalPageCount
+    }
     
     private let columns = [
         GridItem(.adaptive(minimum: 100, maximum: 120), spacing: 12)
@@ -23,14 +35,21 @@ struct PDFPreviewView: View {
                     .font(.headline)
                 Spacer()
                 
-                if totalPages > 0 {
-                    Text("\(totalPages) sayfa")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(Color.secondary.opacity(0.1))
-                        .cornerRadius(8)
+                if displayPageCount > 0 {
+                    HStack(spacing: 4) {
+                        Text("\(displayPageCount) sayfa")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        if needsBlankPage {
+                            Text("(+1 boş)")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(8)
                 }
             }
             .padding()
@@ -40,15 +59,27 @@ struct PDFPreviewView: View {
                 if isLoading {
                     ProgressView("Sayfa önizlemeleri yükleniyor...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if totalPages > 0 {
+                } else if displayPageCount > 0 {
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 12) {
-                            ForEach(1...totalPages, id: \.self) { pageNumber in
-                                PageThumbnailView(
-                                    pageNumber: pageNumber,
-                                    thumbnail: thumbnails[pageNumber],
-                                    status: pageStatus(for: pageNumber)
-                                )
+                            ForEach(1...displayPageCount, id: \.self) { pageNumber in
+                                if pageNumber <= originalPageCount {
+                                    // Normal sayfa
+                                    PageThumbnailView(
+                                        pageNumber: pageNumber,
+                                        thumbnail: thumbnails[pageNumber],
+                                        status: pageStatus(for: pageNumber),
+                                        isBlankPage: false
+                                    )
+                                } else {
+                                    // Boş sayfa (çift yönlü için eklenen)
+                                    PageThumbnailView(
+                                        pageNumber: pageNumber,
+                                        thumbnail: nil,
+                                        status: pageStatus(for: pageNumber),
+                                        isBlankPage: true
+                                    )
+                                }
                             }
                         }
                         .padding()
@@ -62,6 +93,10 @@ struct PDFPreviewView: View {
         }
         .onChange(of: pdfURL) { newURL in
             loadThumbnails(from: newURL)
+        }
+        .onChange(of: settingsStore.duplexEnabled) { _ in
+            // Duplex değiştiğinde sayfa sayısını güncelle
+            totalPages = displayPageCount
         }
         .onAppear {
             loadThumbnails(from: pdfURL)
@@ -104,6 +139,7 @@ struct PDFPreviewView: View {
         guard let url = url else {
             thumbnails = [:]
             totalPages = 0
+            originalPageCount = 0
             return
         }
         
@@ -120,7 +156,8 @@ struct PDFPreviewView: View {
             
             let pageCount = document.pageCount
             await MainActor.run {
-                totalPages = pageCount
+                originalPageCount = pageCount
+                totalPages = displayPageCount
             }
             
             // Her sayfanın thumbnail'ını oluştur
@@ -153,12 +190,34 @@ struct PageThumbnailView: View {
     let pageNumber: Int
     let thumbnail: NSImage?
     let status: PageStatus
+    var isBlankPage: Bool = false
     
     var body: some View {
         VStack(spacing: 4) {
             ZStack {
                 // Thumbnail
-                if let thumbnail = thumbnail {
+                if isBlankPage {
+                    // Boş sayfa gösterimi
+                    Rectangle()
+                        .fill(Color.white)
+                        .frame(width: 100, height: 130)
+                        .cornerRadius(4)
+                        .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(Color.orange.opacity(0.5), style: StrokeStyle(lineWidth: 2, dash: [5]))
+                        )
+                        .overlay(
+                            VStack(spacing: 4) {
+                                Image(systemName: "doc")
+                                    .font(.title2)
+                                    .foregroundColor(.orange.opacity(0.6))
+                                Text("Boş Sayfa")
+                                    .font(.caption2)
+                                    .foregroundColor(.orange)
+                            }
+                        )
+                } else if let thumbnail = thumbnail {
                     Image(nsImage: thumbnail)
                         .resizable()
                         .aspectRatio(contentMode: .fit)

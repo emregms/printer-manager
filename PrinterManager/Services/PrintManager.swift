@@ -65,9 +65,9 @@ class PrintManager: ObservableObject {
             addLog("PDF sayfalara bölünüyor...")
             var pageURLs = try await PDFProcessor.shared.splitPDF(at: pdf)
             
-            // Çift yönlü ve tek sayfa ise boş sayfa ekle
-            if duplex && pageURLs.count == 1 {
-                addLog("Tek sayfalı PDF - çift yön için boş sayfa ekleniyor...")
+            // Çift yönlü ve sayfa sayısı tek ise boş sayfa ekle
+            if duplex && pageURLs.count % 2 != 0 {
+                addLog("Tek sayıda sayfa (\(pageURLs.count)) - çift yön için boş sayfa ekleniyor...")
                 let blankPage = try await PDFProcessor.shared.createBlankPage()
                 pageURLs.append(blankPage)
             }
