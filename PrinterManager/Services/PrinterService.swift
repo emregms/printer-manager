@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import PDFKit
 
 /// Yazıcı servisi - macOS native yazdırma API'lerini kullanarak
 class PrinterService {
@@ -11,7 +12,6 @@ class PrinterService {
     
     /// Sistemde mevcut yazıcıları listeler
     func availablePrinters() -> [String] {
-        // macOS native yazıcı listesi
         return NSPrinter.printerNames
     }
     
@@ -21,91 +21,50 @@ class PrinterService {
     ///   - printerName: Yazıcı adı
     ///   - grayscale: Siyah beyaz modda yazdırma
     func printPage(at url: URL, to printerName: String, grayscale: Bool = false) async throws {
-        return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.main.async {
-                do {
-                    // PDF dokümanını yükle
-                    guard let pdfDocument = CGPDFDocument(url as CFURL) else {
-                        throw PrinterServiceError.cannotOpenPDF
-                    }
-                    
-                    // NSPrintInfo yapılandır
-                    let printInfo = NSPrintInfo.shared.copy() as! NSPrintInfo
-                    printInfo.printer = NSPrinter(name: printerName) ?? NSPrinter()
-                    printInfo.jobDisposition = .spool
-                    printInfo.isHorizontallyCentered = true
-                    printInfo.isVerticallyCentered = true
-                    printInfo.scalingFactor = 1.0
-                    
-                    // Siyah beyaz / Renkli yazdırma ayarı (CUPS)
-                    // ColorModel: Gray, RGB, CMYK
-                    if grayscale {
-                        // Siyah beyaz modu - daha hızlı yazdırma
-                        printInfo.dictionary().setObject("Gray", forKey: "ColorModel" as NSCopying)
-                        printInfo.dictionary().setObject("Grayscale", forKey: "OutputMode" as NSCopying)
-                    } else {
-                        // Renkli mod
-                        printInfo.dictionary().setObject("RGB", forKey: "ColorModel" as NSCopying)
-                        printInfo.dictionary().setObject("Normal", forKey: "OutputMode" as NSCopying)
-                    }
-                    
-                    // Sayfa boyutunu ayarla
-                    if let page = pdfDocument.page(at: 1) {
-                        let mediaBox = page.getBoxRect(.mediaBox)
-                        printInfo.paperSize = NSSize(width: mediaBox.width, height: mediaBox.height)
-                    }
-                    
-                    // PrintOperation oluştur
-                    let printOperation = PDFPrintOperation(
-                        pdfDocument: pdfDocument,
-                        printInfo: printInfo
-                    )
-                    
-                    // Sessiz yazdırma (dialog gösterme)
-                    printOperation.showsPrintPanel = false
-                    printOperation.showsProgressPanel = false
-                    
-                    // Yazdır
-                    printOperation.run()
-                    
-                    continuation.resume()
-                } catch {
-                    continuation.resume(throwing: error)
-                }
+        // lp komutu ile yazdır - en güvenilir yöntem
+        // lp -d "yazıcı_adı" -o ColorModel=Gray dosya.pdf
+        
+        var arguments = ["-d", printerName]
+        
+        // Siyah beyaz modu
+        if grayscale {
+            arguments.append(contentsOf: ["-o", "ColorModel=Gray"])
+        }
+        
+        arguments.append(url.path)
+        
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/lp")
+        process.arguments = arguments
+        
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            let status = process.terminationStatus
+            
+            if status != 0 {
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                let errorMessage = String(data: errorData, encoding: .utf8) ?? "Bilinmeyen hata"
+                print("[PRINT] lp hatası: \(errorMessage)")
+                throw PrinterServiceError.printFailed(errorMessage.trimmingCharacters(in: .whitespacesAndNewlines))
             }
+            
+            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: outputData, encoding: .utf8) ?? ""
+            print("[PRINT] lp başarılı: \(output)")
+            
+        } catch let error as PrinterServiceError {
+            throw error
+        } catch {
+            print("[PRINT] Process hatası: \(error)")
+            throw PrinterServiceError.printFailed(error.localizedDescription)
         }
-    }
-}
-
-// MARK: - PDF Print Operation
-class PDFPrintOperation: NSPrintOperation {
-    private let pdfDocument: CGPDFDocument
-    
-    init(pdfDocument: CGPDFDocument, printInfo: NSPrintInfo) {
-        self.pdfDocument = pdfDocument
-        super.init()
-        self.printInfo = printInfo
-    }
-    
-    override func run() -> Bool {
-        // Yazdırma işlemini gerçekleştir
-        guard let context = NSGraphicsContext.current?.cgContext else {
-            return false
-        }
-        
-        if let page = pdfDocument.page(at: 1) {
-            let mediaBox = page.getBoxRect(.mediaBox)
-            context.beginPDFPage(nil)
-            context.drawPDFPage(page)
-            context.endPDFPage()
-            context.closePDF()
-        }
-        
-        return true
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
     }
 }
 
@@ -120,10 +79,9 @@ enum PrinterServiceError: LocalizedError {
         case .cannotOpenPDF:
             return "PDF dosyası açılamadı"
         case .printerNotFound:
-            return "Yazıcı bulunamadı"
+            return "Yazıcı bulunamadı veya bağlı değil"
         case .printFailed(let reason):
             return "Yazdırma hatası: \(reason)"
         }
     }
 }
-
