@@ -50,6 +50,16 @@ class PrintManager: ObservableObject {
         
         addLog("Yazdırma başlatılıyor...")
         
+        // ÖNCELİKLE: Yazıcı bağlı mı kontrol et
+        addLog("Yazıcı kontrol ediliyor: \(printer)")
+        if !PrinterService.shared.isPrinterAvailable(printer) {
+            addLog("❌ HATA: '\(printer)' yazıcısı bağlı değil veya erişilemiyor!")
+            addLog("Lütfen yazıcının bağlı ve açık olduğundan emin olun.")
+            await cleanup()
+            return
+        }
+        addLog("✓ Yazıcı erişilebilir")
+        
         do {
             // PDF'i böl
             addLog("PDF sayfalara bölünüyor...")
