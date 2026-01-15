@@ -10,19 +10,31 @@ class PrinterService {
     
     // MARK: - Public Methods
     
-    /// Sistemde mevcut yazıcıları listeler
+    /// Sistemde mevcut yazıcıları listeler (UI için orijinal isimler)
     func availablePrinters() -> [String] {
         return NSPrinter.printerNames
     }
     
+    /// NSPrinter adını CUPS formatına dönüştürür
+    /// NSPrinter: "Samsung CLP-300" → CUPS: "Samsung_CLP_300"
+    private func cupsPrinterName(from displayName: String) -> String {
+        // Boşlukları ve tireleri alt tire yap
+        return displayName
+            .replacingOccurrences(of: " ", with: "_")
+            .replacingOccurrences(of: "-", with: "_")
+    }
+    
     /// Yazıcının bağlı ve erişilebilir olup olmadığını kontrol eder
-    /// - Parameter printerName: Kontrol edilecek yazıcı adı
+    /// - Parameter printerName: Kontrol edilecek yazıcı adı (görüntülenen ad)
     /// - Returns: Yazıcı erişilebilirse true, değilse false
     func isPrinterAvailable(_ printerName: String) -> Bool {
+        // CUPS formatına dönüştür
+        let cupsName = cupsPrinterName(from: printerName)
+        
         // lpstat -p yazıcı_adı komutu ile yazıcı durumunu kontrol et
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/lpstat")
-        process.arguments = ["-p", printerName]
+        process.arguments = ["-p", cupsName]
         
         let outputPipe = Pipe()
         let errorPipe = Pipe()
@@ -36,7 +48,7 @@ class PrinterService {
             let status = process.terminationStatus
             
             if status != 0 {
-                print("[PRINTER] Yazıcı bulunamadı veya erişilemez: \(printerName)")
+                print("[PRINTER] Yazıcı bulunamadı: \(printerName) (CUPS: \(cupsName))")
                 return false
             }
             
@@ -45,11 +57,11 @@ class PrinterService {
             let output = String(data: outputData, encoding: .utf8) ?? ""
             
             if output.contains("disabled") || output.contains("not accepting") {
-                print("[PRINTER] Yazıcı devre dışı veya iş kabul etmiyor: \(printerName)")
+                print("[PRINTER] Yazıcı devre dışı: \(printerName)")
                 return false
             }
             
-            print("[PRINTER] Yazıcı erişilebilir: \(printerName) - \(output.trimmingCharacters(in: .whitespacesAndNewlines))")
+            print("[PRINTER] ✓ Yazıcı erişilebilir: \(printerName)")
             return true
             
         } catch {
@@ -61,11 +73,14 @@ class PrinterService {
     /// Tek sayfalık PDF'i belirtilen yazıcıya yazdırır
     /// - Parameters:
     ///   - url: PDF dosyasının URL'si
-    ///   - printerName: Yazıcı adı
+    ///   - printerName: Yazıcı adı (görüntülenen ad)
     ///   - grayscale: Siyah beyaz modda yazdırma
     func printPage(at url: URL, to printerName: String, grayscale: Bool = false) async throws {
+        // CUPS formatına dönüştür
+        let cupsName = cupsPrinterName(from: printerName)
+        
         // lp komutu ile yazdır
-        var arguments = ["-d", printerName]
+        var arguments = ["-d", cupsName]
         
         // Siyah beyaz modu
         if grayscale {
@@ -98,7 +113,7 @@ class PrinterService {
             
             let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
             let output = String(data: outputData, encoding: .utf8) ?? ""
-            print("[PRINT] lp başarılı: \(output)")
+            print("[PRINT] ✓ Yazdırma başarılı: \(output.trimmingCharacters(in: .whitespacesAndNewlines))")
             
         } catch let error as PrinterServiceError {
             throw error
