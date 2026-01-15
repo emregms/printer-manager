@@ -1,12 +1,40 @@
 # 🖨️ PrinterManager for macOS
 
-Modern, native macOS uygulaması - **Lazer yazıcılardaki belt (transfer kayışı) yıpranma sorununu çözer**.
+<p align="center">
+  <a href="#-türkçe">🇹🇷 Türkçe</a> | <a href="#-english">🇬🇧 English</a>
+</p>
 
-Çok sayfalı PDF'leri yazdırırken sayfalar arası bekleme süresi ayarlayarak, yazıcının transfer kayışının (belt) aşırı ısınmasını ve erken yıpranmasını önler. Özellikle **eski veya hassas lazer yazıcılar** için ideal bir çözümdür.
-
-> 🧪 **Test:** Bu uygulama Samsung CLP-300 renkli lazer yazıcı ile test edilmiştir, ancak benzer sorun yaşayan tüm lazer yazıcılarda kullanılabilir.
+<p align="center">
+  <a href="https://github.com/emregms/printer-manager/releases/latest">
+    <img src="https://img.shields.io/badge/⬇️_Download-v1.0.0-blue?style=for-the-badge" alt="Download"/>
+  </a>
+  <a href="https://github.com/emregms/printer-manager/releases/latest">
+    <img src="https://img.shields.io/github/downloads/emregms/printer-manager/total?style=for-the-badge&color=green" alt="Downloads"/>
+  </a>
+  <img src="https://img.shields.io/badge/macOS-13.0+-black?style=for-the-badge&logo=apple" alt="macOS"/>
+  <img src="https://img.shields.io/badge/license-MIT-orange?style=for-the-badge" alt="License"/>
+</p>
 
 ---
+
+# 🇹🇷 Türkçe
+
+**Lazer yazıcılardaki belt (transfer kayışı) yıpranma sorununu çözen native macOS uygulaması.**
+
+Çok sayfalı PDF'leri yazdırırken sayfalar arası bekleme süresi ayarlayarak, yazıcının transfer kayışının aşırı ısınmasını ve erken yıpranmasını önler.
+
+> 🧪 **Test:** Samsung CLP-300 ile test edilmiştir, benzer sorun yaşayan tüm lazer yazıcılarda kullanılabilir.
+
+## 📥 İndirme
+
+<p align="center">
+  <a href="https://github.com/emregms/printer-manager/releases/download/v1.0.0/PrinterManager-v1.0.0.dmg">
+    <img src="https://img.shields.io/badge/⬇️_DMG_İndir-PrinterManager_v1.0.0-blue?style=for-the-badge&logo=apple" alt="Download DMG"/>
+  </a>
+</p>
+
+> ⚠️ **İlk açılışta:** macOS "tanımlanamayan geliştirici" uyarısı verebilir.  
+> Uygulamaya **sağ tıklayın → "Aç"** seçin → **"Aç"** butonuna tıklayın.
 
 ## 📸 Ekran Görüntüleri
 
@@ -28,138 +56,111 @@ Modern, native macOS uygulaması - **Lazer yazıcılardaki belt (transfer kayı�
   <em>Çift yönlü (duplex) yazdırma - kağıt çevirme uyarısı</em>
 </p>
 
----
-
 ## ✨ Özellikler
 
-| Özellik                               | Açıklama                                                                   |
-| ------------------------------------- | -------------------------------------------------------------------------- |
-| ⏱️ **Ayarlanabilir Bekleme Süreleri** | Yazdırma ve temizlik süreleri slider ile ayarlanır                         |
-| 📄 **Sayfa Sayfa Yazdırma**           | Her sayfa ayrı ayrı yazıcıya gönderilir                                    |
-| 🔄 **Çift Yönlü (Duplex) Yazdırma**   | Tek sayfaları yazdır → Kağıtları çevir → Çift sayfaları ters sırada yazdır |
-| 👁️ **PDF Önizleme**                   | Thumbnail grid ile tüm sayfaları görüntüle                                 |
-| ⏸️ **Durdur/Devam Et**                | Yazdırmayı istediğiniz zaman duraklatıp devam ettirin                      |
-| ⏰ **Tahmini Süre**                   | Kalan yazdırma süresini görün                                              |
-| 🖤 **Siyah Beyaz Modu**               | Daha hızlı ve ekonomik yazdırma                                            |
-| 🧹 **Otomatik Temizlik**              | Temp dosyaları otomatik silinir                                            |
-| 🍎 **Native macOS**                   | Swift + SwiftUI ile Apple Silicon için optimize                            |
+| Özellik                      | Açıklama                                           |
+| ---------------------------- | -------------------------------------------------- |
+| ⏱️ **Ayarlanabilir Bekleme** | Yazdırma ve temizlik süreleri slider ile ayarlanır |
+| 📄 **Sayfa Sayfa Yazdırma**  | Her sayfa ayrı ayrı yazıcıya gönderilir            |
+| 🔄 **Çift Yönlü Yazdırma**   | Tek → Çevir → Çift sayfalar ters sırada            |
+| 👁️ **PDF Önizleme**          | Thumbnail grid ile tüm sayfaları görüntüle         |
+| ⏸️ **Durdur/Devam**          | Yazdırmayı duraklatıp devam ettirin                |
+| ⏰ **Tahmini Süre**          | Kalan yazdırma süresini görün                      |
+| 🖤 **Siyah Beyaz Modu**      | Daha hızlı ve ekonomik yazdırma                    |
+| 🍎 **Native macOS**          | Swift + SwiftUI, Apple Silicon optimize            |
+
+## � Gereksinimler
+
+- macOS 13.0 (Ventura) veya üzeri
+- Intel veya Apple Silicon (M1/M2/M3)
+
+## 📖 Kullanım
+
+1. **Yazıcı Seçin** → Dropdown'dan yazıcınızı seçin
+2. **Süreleri Ayarlayın** → Yazdırma (30sn) + Temizlik (8sn)
+3. **PDF Seçin** → Dosyanızı yükleyin
+4. **Yazdır** → İlerlemeyi izleyin
 
 ---
 
-## 🖨️ Hangi Yazıcılar İçin?
+# 🇬🇧 English
 
-Bu uygulama özellikle şu durumlarda faydalıdır:
+**Native macOS application that prevents laser printer transfer belt wear.**
 
-- **Eski lazer yazıcılar** - Transfer kayışı (belt) yıpranma sorunu yaşayanlar
-- **Renkli lazer yazıcılar** - Daha hassas mekanizmaya sahip modeller
-- **Yüksek hacimli yazdırma** - Çok sayfalı dökümanları sık yazdıranlar
-- **Isınma sorunu yaşayanlar** - Art arda yazdırmada kalite kaybı görenler
+Adds configurable delays between pages when printing multi-page PDFs, preventing the transfer belt from overheating and premature wear.
 
-### Test Edilen Yazıcılar
+> 🧪 **Tested:** With Samsung CLP-300, compatible with all laser printers experiencing similar issues.
 
-| Yazıcı          | Durum         |
-| --------------- | ------------- |
-| Samsung CLP-300 | ✅ Tam uyumlu |
+## 📥 Download
 
-> 💡 Başka bir yazıcı ile test ettiyseniz lütfen issue açarak bildirin!
+<p align="center">
+  <a href="https://github.com/emregms/printer-manager/releases/download/v1.0.0/PrinterManager-v1.0.0.dmg">
+    <img src="https://img.shields.io/badge/⬇️_Download_DMG-PrinterManager_v1.0.0-blue?style=for-the-badge&logo=apple" alt="Download DMG"/>
+  </a>
+</p>
+
+> ⚠️ **First launch:** macOS may show "unidentified developer" warning.  
+> **Right-click → "Open"** → Click **"Open"** button.
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="screenshots/1.png" alt="PDF Preview" width="800"/>
+  <br/>
+  <em>Multi-page preview and print settings</em>
+</p>
+
+<p align="center">
+  <img src="screenshots/2.png" alt="Printing Progress" width="800"/>
+  <br/>
+  <em>Page-by-page printing with progress tracking</em>
+</p>
+
+<p align="center">
+  <img src="screenshots/3.png" alt="Duplex Printing" width="800"/>
+  <br/>
+  <em>Duplex (double-sided) printing - flip pages prompt</em>
+</p>
+
+## ✨ Features
+
+| Feature                  | Description                              |
+| ------------------------ | ---------------------------------------- |
+| ⏱️ **Adjustable Delays** | Print and cleaning delays with sliders   |
+| 📄 **Page-by-Page**      | Each page sent separately to printer     |
+| 🔄 **Manual Duplex**     | Odd pages → Flip → Even pages reversed   |
+| 👁️ **PDF Preview**       | Thumbnail grid for all pages             |
+| ⏸️ **Pause/Resume**      | Pause and continue printing anytime      |
+| ⏰ **Time Estimate**     | See remaining print time                 |
+| 🖤 **Grayscale Mode**    | Faster and more economical               |
+| 🍎 **Native macOS**      | Swift + SwiftUI, Apple Silicon optimized |
+
+## 📋 Requirements
+
+- macOS 13.0 (Ventura) or later
+- Intel or Apple Silicon (M1/M2/M3)
+
+## 📖 Usage
+
+1. **Select Printer** → Choose from dropdown
+2. **Set Delays** → Print (30s) + Cleaning (8s)
+3. **Select PDF** → Load your file
+4. **Print** → Monitor progress
 
 ---
 
-## 📋 Sistem Gereksinimleri
-
-- **macOS:** 13.0 (Ventura) veya üzeri
-- **İşlemci:** Intel veya Apple Silicon (M1/M2/M3)
-- **Yazıcı:** CUPS uyumlu herhangi bir yazıcı
-
----
-
-## 🚀 Kurulum
-
-### Derlenmiş Uygulama
-
-1. [Releases](../../releases) sayfasından `.dmg` dosyasını indirin
-2. DMG'yi açın ve uygulamayı `/Applications` klasörüne sürükleyin
-3. Uygulamayı çalıştırın
-
-### Kaynak Koddan Derleme
+## � Build from Source
 
 ```bash
 git clone https://github.com/emregms/printer-manager.git
 cd printer-manager
 open PrinterManager.xcodeproj
-# Xcode'da ⌘+R ile çalıştırın veya ⌘+B ile derleyin
+# Press ⌘+R to run or ⌘+B to build
 ```
 
----
+## 📄 License
 
-## 📖 Kullanım
-
-1. **Yazıcı Seçin** - Dropdown'dan yazıcınızı seçin
-2. **Süreleri Ayarlayın**
-   - 🖨️ **Yazdırma Süresi:** Her sayfa arasındaki bekleme (örn: 30 sn)
-   - ✨ **Temizlik Süresi:** Belt temizliği için ek bekleme (örn: 8 sn)
-3. **PDF Seçin** - "PDF Seç" butonu ile dosyanızı yükleyin
-4. **Çift Yönlü (opsiyonel)** - Toggle ile aktif edin
-5. **Yazdır** - Yazdırma başlar, ilerlemeyi izleyin
-
-### Çift Yönlü Yazdırma
-
-1. Uygulama önce tek sayfaları (1, 3, 5...) yazdırır
-2. "Kağıtları Çeviriniz" uyarısı gelir
-3. Kağıtları ters çevirip yazıcıya yükleyin
-4. "Çevirdim, Devam Et" butonuna tıklayın
-5. Çift sayfalar (6, 4, 2...) ters sırada yazdırılır
-
----
-
-## 🔧 Teknik Detaylar
-
-### Proje Yapısı
-
-```
-PrinterManager/
-├── App/
-│   └── PrinterManagerApp.swift    # Uygulama giriş noktası
-├── Views/
-│   ├── ContentView.swift          # Ana ekran
-│   ├── SettingsView.swift         # Ayarlar paneli
-│   ├── PDFPreviewView.swift       # PDF thumbnail grid
-│   └── PrintProgressView.swift    # İlerleme durumu
-├── Services/
-│   ├── PrintManager.swift         # Yazdırma yönetimi
-│   ├── PrinterService.swift       # CUPS entegrasyonu (lp komutu)
-│   └── PDFProcessor.swift         # PDF işleme (PDFKit)
-├── Models/
-│   └── SettingsStore.swift        # Ayar kalıcılığı (UserDefaults)
-└── Resources/
-    └── Assets.xcassets/           # Uygulama ikonları
-```
-
-### Kullanılan Teknolojiler
-
-- **Swift 5.9+**
-- **SwiftUI** - Modern deklaratif UI
-- **PDFKit** - Native PDF işleme
-- **CUPS** - macOS yazdırma sistemi (`lp` komutu)
-- **Combine** - Reaktif programlama
-
----
-
-## 📄 Lisans
-
-MIT License - Detaylar için [LICENSE](LICENSE) dosyasına bakın.
-
----
-
-## 🤝 Katkıda Bulunma
-
-Katkılarınız memnuniyetle karşılanır!
-
-1. Fork yapın
-2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Commit atın (`git commit -m 'feat: Add amazing feature'`)
-4. Push yapın (`git push origin feature/amazing-feature`)
-5. Pull Request açın
+MIT License - [Hüseyin Emre Gümüş](mailto:info@hegg.tr)
 
 ---
 
