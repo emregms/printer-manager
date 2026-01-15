@@ -1,28 +1,32 @@
-node_modules
-dist/
-dist-electron/
-release/
-build/
-*.exe
-*.msi
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Env
-.env
-.env.local
-
-# Editor/OS
+# Xcode
 .DS_Store
-Thumbs.db
-.idea/
-.vscode/
-*.swp
+build/
+DerivedData/
+*.xcuserstate
+*.xcworkspace
+xcuserdata/
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
 
-# Misc
-*.local
-*.cache
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Archives
+*.xcarchive
+
+# Distribution
+*.app
+*.dmg
+*.pkg
