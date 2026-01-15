@@ -65,6 +65,38 @@ actor PDFProcessor {
         }
     }
     
+    /// Boş sayfa oluşturur (çift yönlü yazdırma için)
+    func createBlankPage(size: CGSize? = nil) async throws -> URL {
+        // Temp dizini yoksa oluştur
+        let tempDir: URL
+        if let existingDir = tempDirectory {
+            tempDir = existingDir
+        } else {
+            tempDir = try createTempDirectory()
+            self.tempDirectory = tempDir
+        }
+        
+        // Standart A4 boyutu veya belirtilen boyut
+        let pageSize = size ?? CGSize(width: 595, height: 842) // A4 @ 72 DPI
+        
+        // Boş PDF oluştur
+        let blankURL = tempDir.appendingPathComponent("blank_page.pdf")
+        
+        // PDF context ile boş sayfa oluştur
+        var mediaBox = CGRect(origin: .zero, size: pageSize)
+        
+        guard let context = CGContext(blankURL as CFURL, mediaBox: &mediaBox, nil) else {
+            throw PDFProcessorError.cannotWritePage(0)
+        }
+        
+        context.beginPage(mediaBox: &mediaBox)
+        // Boş sayfa - içerik eklemeye gerek yok
+        context.endPage()
+        context.closePDF()
+        
+        return blankURL
+    }
+    
     // MARK: - Private Methods
     
     private func createTempDirectory() throws -> URL {

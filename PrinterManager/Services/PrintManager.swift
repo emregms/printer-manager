@@ -63,7 +63,15 @@ class PrintManager: ObservableObject {
         do {
             // PDF'i böl
             addLog("PDF sayfalara bölünüyor...")
-            let pageURLs = try await PDFProcessor.shared.splitPDF(at: pdf)
+            var pageURLs = try await PDFProcessor.shared.splitPDF(at: pdf)
+            
+            // Çift yönlü ve tek sayfa ise boş sayfa ekle
+            if duplex && pageURLs.count == 1 {
+                addLog("Tek sayfalı PDF - çift yön için boş sayfa ekleniyor...")
+                let blankPage = try await PDFProcessor.shared.createBlankPage()
+                pageURLs.append(blankPage)
+            }
+            
             totalPages = pageURLs.count
             addLog("\(pageURLs.count) sayfa hazırlandı")
             
@@ -72,7 +80,7 @@ class PrintManager: ObservableObject {
             if duplex {
                 // İlk geçiş: tek sayfalar (1, 3, 5...)
                 pagesToPrint = Array(stride(from: 0, to: pageURLs.count, by: 2))
-                addLog("Çift yönlü yazdırma - İlk geçiş: \(pagesToPrint.count) sayfa")
+                addLog("Çift yönlü yazdırma - İlk geçiş: \(pagesToPrint.count) sayfa (tek sayfalar)")
             } else {
                 // Tüm sayfalar
                 pagesToPrint = Array(0..<pageURLs.count)
@@ -92,10 +100,12 @@ class PrintManager: ObservableObject {
                 }
                 
                 if !isCancelled {
-                    // İkinci geçiş: çift sayfalar (2, 4, 6...)
+                    // İkinci geçiş: çift sayfalar TERS SIRADA (son çift sayfadan ilke doğru)
+                    // Örnek: 6 sayfalı PDF için -> [5, 3, 1] indeksleri (sayfa 6, 4, 2)
                     let evenPages = Array(stride(from: 1, to: pageURLs.count, by: 2))
-                    addLog("Çift yönlü yazdırma - İkinci geçiş: \(evenPages.count) sayfa")
-                    try await printPages(pageURLs: pageURLs, pageIndices: evenPages, isSecondPass: true)
+                    let reversedEvenPages = evenPages.reversed().map { $0 } // Ters çevir
+                    addLog("Çift yönlü yazdırma - İkinci geçiş: \(reversedEvenPages.count) sayfa (çift sayfalar, ters sırada)")
+                    try await printPages(pageURLs: pageURLs, pageIndices: reversedEvenPages, isSecondPass: true)
                 }
             }
             
