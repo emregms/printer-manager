@@ -33,8 +33,21 @@
   </a>
 </p>
 
-> ⚠️ **İlk açılışta:** macOS "tanımlanamayan geliştirici" uyarısı verebilir.  
-> Uygulamaya **sağ tıklayın → "Aç"** seçin → **"Aç"** butonuna tıklayın.
+### ⚠️ İlk Açılışta macOS Uyarısı
+
+macOS imzasız uygulamaları engeller. Uygulamayı açmak için:
+
+**Yöntem 1 - Terminal (Önerilen):**
+
+```bash
+xattr -cr /Applications/PrinterManager.app
+```
+
+**Yöntem 2 - Manuel:**
+
+1. Uygulamaya **sağ tıklayın** (veya Control+tıklama)
+2. **"Aç"** seçeneğini tıklayın
+3. Açılan pencerede tekrar **"Aç"** butonuna tıklayın
 
 ## 📸 Ekran Görüntüleri
 
@@ -99,8 +112,21 @@ Adds configurable delays between pages when printing multi-page PDFs, preventing
   </a>
 </p>
 
-> ⚠️ **First launch:** macOS may show "unidentified developer" warning.  
-> **Right-click → "Open"** → Click **"Open"** button.
+### ⚠️ macOS Security Warning on First Launch
+
+macOS blocks unsigned applications. To open the app:
+
+**Method 1 - Terminal (Recommended):**
+
+```bash
+xattr -cr /Applications/PrinterManager.app
+```
+
+**Method 2 - Manual:**
+
+1. **Right-click** on the app (or Control+click)
+2. Select **"Open"**
+3. Click **"Open"** in the dialog
 
 ## 📸 Screenshots
 
