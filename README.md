@@ -4,17 +4,6 @@
   <a href="#-türkçe">🇹🇷 Türkçe</a> | <a href="#-english">🇬🇧 English</a>
 </p>
 
-<p align="center">
-  <a href="https://github.com/emregms/printer-manager/releases/latest">
-    <img src="https://img.shields.io/badge/⬇️_Download-v1.0.0-blue?style=for-the-badge" alt="Download"/>
-  </a>
-  <a href="https://github.com/emregms/printer-manager/releases/latest">
-    <img src="https://img.shields.io/github/downloads/emregms/printer-manager/total?style=for-the-badge&color=green" alt="Downloads"/>
-  </a>
-  <img src="https://img.shields.io/badge/macOS-13.0+-black?style=for-the-badge&logo=apple" alt="macOS"/>
-  <img src="https://img.shields.io/badge/license-MIT-orange?style=for-the-badge" alt="License"/>
-</p>
-
 ---
 
 # 🇹🇷 Türkçe
