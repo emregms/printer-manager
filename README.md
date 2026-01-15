@@ -11,19 +11,19 @@ Modern, native macOS uygulaması - **Lazer yazıcılardaki belt (transfer kayı�
 ## 📸 Ekran Görüntüleri
 
 <p align="center">
-  <img src="screenshots/3.png" alt="PDF Önizleme" width="800"/>
+  <img src="screenshots/1.png" alt="PDF Önizleme" width="800"/>
   <br/>
   <em>Çoklu sayfa önizleme ve yazdırma ayarları</em>
 </p>
 
 <p align="center">
-  <img src="screenshots/1.png" alt="Yazdırma İşlemi" width="800"/>
+  <img src="screenshots/2.png" alt="Yazdırma İşlemi" width="800"/>
   <br/>
   <em>Sayfa sayfa yazdırma ve ilerleme durumu</em>
 </p>
 
 <p align="center">
-  <img src="screenshots/2.png" alt="Çift Yönlü Yazdırma" width="800"/>
+  <img src="screenshots/3.png" alt="Çift Yönlü Yazdırma" width="800"/>
   <br/>
   <em>Çift yönlü (duplex) yazdırma - kağıt çevirme uyarısı</em>
 </p>
