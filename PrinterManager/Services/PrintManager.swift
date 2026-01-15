@@ -147,23 +147,25 @@ class PrintManager: ObservableObject {
             currentPage = pageIndex + 1
             isCleaningPhase = false
             
-            addLog("Sayfa \(pageIndex + 1) yazdırılıyor...")
-            
-            // Yazdırma beklemesi
-            await waitWithProgress(duration: printDelay, phase: .printing)
-            
-            guard !isCancelled else { break }
-            
-            // Yazdır
+            // 1) ÖNCE YAZDIR - hemen başla
+            addLog("Sayfa \(pageIndex + 1) yazıcıya gönderiliyor...")
             do {
                 try await PrinterService.shared.printPage(at: pageURL, to: printerName, grayscale: isGrayscale)
-                addLog("Sayfa \(pageIndex + 1) yazıcıya gönderildi")
+                addLog("✓ Sayfa \(pageIndex + 1) yazıcıya gönderildi")
             } catch {
                 addLog("⚠️ Sayfa \(pageIndex + 1) yazdırma hatası: \(error.localizedDescription)")
             }
             
-            // Son sayfa değilse temizlik beklemesi
-            if index < pageIndices.count - 1 && !isCancelled {
+            guard !isCancelled else { break }
+            
+            // 2) SONRA BEKLE - yazdırma süresi (sayfa basılsın diye)
+            if index < pageIndices.count - 1 {
+                addLog("Sayfa \(pageIndex + 1) basılıyor, bekleniyor...")
+                await waitWithProgress(duration: printDelay, phase: .printing)
+                
+                guard !isCancelled else { break }
+                
+                // 3) Temizlik beklemesi
                 isCleaningPhase = true
                 addLog("Belt temizleme bekleniyor...")
                 await waitWithProgress(duration: cleanDelay, phase: .cleaning)
