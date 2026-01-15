@@ -101,6 +101,21 @@ struct SettingsView: View {
                     .padding(.leading, 4)
             }
             
+            // Siyah Beyaz Yazdırma
+            Toggle(isOn: $settingsStore.grayscaleMode) {
+                Label("Siyah Beyaz Yazdırma", systemImage: "circle.lefthalf.filled")
+                    .font(.subheadline.weight(.medium))
+            }
+            .toggleStyle(.switch)
+            .tint(.gray)
+            
+            if settingsStore.grayscaleMode {
+                Text("Daha hızlı yazdırma için renkli yerine siyah beyaz modu kullanılır.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 4)
+            }
+            
             Divider()
             
             // PDF Seçimi

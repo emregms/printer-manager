@@ -115,7 +115,8 @@ struct ContentView: View {
                 printer: printer,
                 printDelay: TimeInterval(settingsStore.printDelaySeconds),
                 cleanDelay: TimeInterval(settingsStore.cleanDelaySeconds),
-                duplex: settingsStore.duplexEnabled
+                duplex: settingsStore.duplexEnabled,
+                grayscale: settingsStore.grayscaleMode
             )
         }
     }

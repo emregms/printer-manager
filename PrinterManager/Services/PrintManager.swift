@@ -23,6 +23,7 @@ class PrintManager: ObservableObject {
     private var printDelay: TimeInterval = 30
     private var cleanDelay: TimeInterval = 8
     private var isDuplex: Bool = false
+    private var isGrayscale: Bool = false
     
     // MARK: - Public Methods
     
@@ -32,7 +33,8 @@ class PrintManager: ObservableObject {
         printer: String,
         printDelay: TimeInterval,
         cleanDelay: TimeInterval,
-        duplex: Bool
+        duplex: Bool,
+        grayscale: Bool = false
     ) async {
         guard !isPrinting else { return }
         
@@ -41,6 +43,7 @@ class PrintManager: ObservableObject {
         self.printDelay = printDelay
         self.cleanDelay = cleanDelay
         self.isDuplex = duplex
+        self.isGrayscale = grayscale
         self.isCancelled = false
         self.isPrinting = true
         self.showFlipPagesDialog = false
@@ -143,7 +146,7 @@ class PrintManager: ObservableObject {
             
             // Yazdır
             do {
-                try await PrinterService.shared.printPage(at: pageURL, to: printerName)
+                try await PrinterService.shared.printPage(at: pageURL, to: printerName, grayscale: isGrayscale)
                 addLog("Sayfa \(pageIndex + 1) yazıcıya gönderildi")
             } catch {
                 addLog("⚠️ Sayfa \(pageIndex + 1) yazdırma hatası: \(error.localizedDescription)")

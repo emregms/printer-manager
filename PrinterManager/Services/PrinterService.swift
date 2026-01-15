@@ -16,7 +16,11 @@ class PrinterService {
     }
     
     /// Tek sayfalık PDF'i belirtilen yazıcıya yazdırır
-    func printPage(at url: URL, to printerName: String) async throws {
+    /// - Parameters:
+    ///   - url: PDF dosyasının URL'si
+    ///   - printerName: Yazıcı adı
+    ///   - grayscale: Siyah beyaz modda yazdırma
+    func printPage(at url: URL, to printerName: String, grayscale: Bool = false) async throws {
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.main.async {
                 do {
@@ -32,6 +36,18 @@ class PrinterService {
                     printInfo.isHorizontallyCentered = true
                     printInfo.isVerticallyCentered = true
                     printInfo.scalingFactor = 1.0
+                    
+                    // Siyah beyaz / Renkli yazdırma ayarı (CUPS)
+                    // ColorModel: Gray, RGB, CMYK
+                    if grayscale {
+                        // Siyah beyaz modu - daha hızlı yazdırma
+                        printInfo.dictionary().setObject("Gray", forKey: "ColorModel" as NSCopying)
+                        printInfo.dictionary().setObject("Grayscale", forKey: "OutputMode" as NSCopying)
+                    } else {
+                        // Renkli mod
+                        printInfo.dictionary().setObject("RGB", forKey: "ColorModel" as NSCopying)
+                        printInfo.dictionary().setObject("Normal", forKey: "OutputMode" as NSCopying)
+                    }
                     
                     // Sayfa boyutunu ayarla
                     if let page = pdfDocument.page(at: 1) {

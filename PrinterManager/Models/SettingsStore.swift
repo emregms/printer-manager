@@ -20,6 +20,10 @@ class SettingsStore: ObservableObject {
         didSet { save() }
     }
     
+    @Published var grayscaleMode: Bool = false {
+        didSet { save() }
+    }
+    
     // MARK: - Private Properties
     private let defaults = UserDefaults.standard
     
@@ -28,6 +32,7 @@ class SettingsStore: ObservableObject {
         static let printDelaySeconds = "printDelaySeconds"
         static let cleanDelaySeconds = "cleanDelaySeconds"
         static let duplexEnabled = "duplexEnabled"
+        static let grayscaleMode = "grayscaleMode"
     }
     
     // MARK: - Initialization
@@ -48,6 +53,7 @@ class SettingsStore: ObservableObject {
         cleanDelaySeconds = savedCleanDelay > 0 ? savedCleanDelay : 8
         
         duplexEnabled = defaults.bool(forKey: Keys.duplexEnabled)
+        grayscaleMode = defaults.bool(forKey: Keys.grayscaleMode)
     }
     
     private func save() {
@@ -55,5 +61,6 @@ class SettingsStore: ObservableObject {
         defaults.set(printDelaySeconds, forKey: Keys.printDelaySeconds)
         defaults.set(cleanDelaySeconds, forKey: Keys.cleanDelaySeconds)
         defaults.set(duplexEnabled, forKey: Keys.duplexEnabled)
+        defaults.set(grayscaleMode, forKey: Keys.grayscaleMode)
     }
 }
