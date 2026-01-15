@@ -11,12 +11,8 @@ class PrinterService {
     
     /// Sistemde mevcut yazıcıları listeler
     func availablePrinters() -> [String] {
-        // macOS'ta mevcut yazıcıları al
-        guard let printerNames = PMServerCreatePrinterList(nil)?.takeRetainedValue() as? [String] else {
-            // Alternatif yöntem: NSPrinter kullan
-            return NSPrinter.printerNames
-        }
-        return printerNames
+        // macOS native yazıcı listesi
+        return NSPrinter.printerNames
     }
     
     /// Tek sayfalık PDF'i belirtilen yazıcıya yazdırır
@@ -115,7 +111,3 @@ enum PrinterServiceError: LocalizedError {
     }
 }
 
-// MARK: - Core Printing Bridge
-/// PMServerCreatePrinterList için C köprüsü
-@_silgen_name("PMServerCreatePrinterList")
-private func PMServerCreatePrinterList(_ server: UnsafeMutableRawPointer?) -> Unmanaged<CFArray>?
