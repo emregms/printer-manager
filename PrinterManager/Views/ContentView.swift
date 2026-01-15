@@ -125,6 +125,14 @@ struct ContentView: View {
         selectedPDF?.stopAccessingSecurityScopedResource()
         selectedPDF = nil
         printManager.clearLogs()
+        
+        // Temp dosyalarını temizle
+        Task {
+            await PDFProcessor.shared.cleanupTempFiles()
+            await MainActor.run {
+                printManager.addLog("Cache temizlendi")
+            }
+        }
     }
 }
 
