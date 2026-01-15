@@ -4,17 +4,54 @@ struct PrintProgressView: View {
     @EnvironmentObject var printManager: PrintManager
     @EnvironmentObject var settingsStore: SettingsStore
     
+    /// Tahmini kalan süreyi formatla
+    private var estimatedTimeText: String {
+        let totalSeconds = Int(printManager.estimatedTimeRemaining)
+        if totalSeconds <= 0 { return "0 sn" }
+        
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        
+        if minutes > 0 {
+            return "\(minutes) dk \(seconds) sn"
+        } else {
+            return "\(seconds) sn"
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 16) {
             HStack {
-                Image(systemName: printManager.isCleaningPhase ? "sparkles" : "printer.fill")
-                    .font(.title2)
-                    .foregroundColor(printManager.isCleaningPhase ? .orange : .accentColor)
-                
-                Text(printManager.isCleaningPhase ? "Belt Temizleme" : "Sayfa Yazdırma")
-                    .font(.headline)
+                // Durum ikonu ve başlık
+                if printManager.isPaused {
+                    Image(systemName: "pause.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.orange)
+                    Text("Duraklatıldı")
+                        .font(.headline)
+                        .foregroundColor(.orange)
+                } else {
+                    Image(systemName: printManager.isCleaningPhase ? "sparkles" : "printer.fill")
+                        .font(.title2)
+                        .foregroundColor(printManager.isCleaningPhase ? .orange : .accentColor)
+                    Text(printManager.isCleaningPhase ? "Belt Temizleme" : "Sayfa Yazdırma")
+                        .font(.headline)
+                }
                 
                 Spacer()
+                
+                // Durdur/Devam Et butonu
+                Button(action: {
+                    printManager.togglePause()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: printManager.isPaused ? "play.fill" : "pause.fill")
+                        Text(printManager.isPaused ? "Devam" : "Duraklat")
+                    }
+                    .font(.caption.bold())
+                }
+                .buttonStyle(.bordered)
+                .tint(printManager.isPaused ? .green : .orange)
                 
                 if let current = printManager.currentPage {
                     Text("\(current) / \(printManager.totalPages)")
@@ -35,9 +72,11 @@ struct PrintProgressView: View {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(
                                 LinearGradient(
-                                    colors: printManager.isCleaningPhase 
-                                        ? [.orange, .yellow] 
-                                        : [.blue, .cyan],
+                                    colors: printManager.isPaused
+                                        ? [.gray, .gray.opacity(0.7)]
+                                        : (printManager.isCleaningPhase 
+                                            ? [.orange, .yellow] 
+                                            : [.blue, .cyan]),
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -49,22 +88,23 @@ struct PrintProgressView: View {
                 .frame(height: 12)
                 
                 HStack {
-                    Text(printManager.isCleaningPhase ? "Temizlik bekleniyor..." : "Yazdırılıyor...")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
+                    if printManager.isPaused {
+                        Text("⏸ Bekleniyor...")
+                    } else {
+                        Text(printManager.isCleaningPhase ? "Temizlik bekleniyor..." : "Yazdırılıyor...")
+                    }
                     Spacer()
-                    
                     Text("Kalan: \(Int(printManager.timeRemaining)) sn")
-                        .font(.caption.monospacedDigit())
-                        .foregroundColor(.secondary)
+                        .monospacedDigit()
                 }
+                .font(.caption)
+                .foregroundColor(.secondary)
             }
             
-            // Genel ilerleme
+            // Genel ilerleme ve tahmini süre
             let overallProgress = Double(printManager.currentPage ?? 0) / Double(max(1, printManager.totalPages))
             
-            HStack {
+            HStack(spacing: 12) {
                 Text("Genel İlerleme")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -76,7 +116,23 @@ struct PrintProgressView: View {
                 Text("\(Int(overallProgress * 100))%")
                     .font(.caption.monospacedDigit().bold())
                     .foregroundColor(.green)
-                    .frame(width: 40)
+                    .frame(width: 36)
+                
+                Divider()
+                    .frame(height: 16)
+                
+                // Tahmini kalan süre
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                        .font(.caption)
+                    Text("≈ \(estimatedTimeText)")
+                        .font(.caption.monospacedDigit())
+                }
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.secondary.opacity(0.1))
+                .cornerRadius(6)
             }
         }
         .padding()

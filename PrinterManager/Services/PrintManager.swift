@@ -6,6 +6,7 @@ import Combine
 class PrintManager: ObservableObject {
     // MARK: - Published Properties
     @Published var isPrinting: Bool = false
+    @Published var isPaused: Bool = false
     @Published var currentPage: Int?
     @Published var totalPages: Int = 0
     @Published var progress: Double = 0.0
@@ -13,6 +14,14 @@ class PrintManager: ObservableObject {
     @Published var isCleaningPhase: Bool = false
     @Published var logs: [String] = []
     @Published var showFlipPagesDialog: Bool = false
+    
+    /// Tahmini kalan toplam süre (saniye)
+    var estimatedTimeRemaining: TimeInterval {
+        guard isPrinting, let current = currentPage, totalPages > 0 else { return 0 }
+        let remainingPages = totalPages - current
+        let perPageTime = printDelay + cleanDelay
+        return TimeInterval(remainingPages) * perPageTime + timeRemaining
+    }
     
     // MARK: - Private Properties
     private var printTask: Task<Void, Never>?
@@ -124,9 +133,33 @@ class PrintManager: ObservableObject {
     /// Yazdırmayı iptal eder
     func cancel() {
         isCancelled = true
+        isPaused = false
         pendingDuplexContinuation?.resume()
         pendingDuplexContinuation = nil
         addLog("⚠️ Yazdırma iptal edildi")
+    }
+    
+    /// Yazdırmayı duraklatır
+    func pause() {
+        guard isPrinting && !isPaused else { return }
+        isPaused = true
+        addLog("⏸ Yazdırma duraklatıldı")
+    }
+    
+    /// Yazdırmaya devam eder
+    func resume() {
+        guard isPrinting && isPaused else { return }
+        isPaused = false
+        addLog("▶️ Yazdırma devam ediyor")
+    }
+    
+    /// Durdur/Devam değiştirir
+    func togglePause() {
+        if isPaused {
+            resume()
+        } else {
+            pause()
+        }
     }
     
     /// Çift yönlü yazdırmada devam et
@@ -189,17 +222,30 @@ class PrintManager: ObservableObject {
     }
     
     private func waitWithProgress(duration: TimeInterval, phase: WaitPhase) async {
-        let startTime = Date()
-        let endTime = startTime.addingTimeInterval(duration)
+        var remainingDuration = duration
         
-        while Date() < endTime && !isCancelled {
-            let elapsed = Date().timeIntervalSince(startTime)
-            let remaining = max(0, duration - elapsed)
+        while remainingDuration > 0 && !isCancelled {
+            // Duraklatıldıysa bekle
+            while isPaused && !isCancelled {
+                try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+            }
             
-            self.timeRemaining = remaining
-            self.progress = elapsed / duration
+            guard !isCancelled else { break }
+            
+            let stepStart = Date()
+            let stepDuration: TimeInterval = 0.1 // 100ms adımlar
+            
+            // Kalan süreyi güncelle
+            self.timeRemaining = remainingDuration
+            self.progress = 1.0 - (remainingDuration / duration)
             
             try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+            
+            // Eğer duraklatılmadıysa süreyi azalt
+            if !isPaused {
+                let elapsed = Date().timeIntervalSince(stepStart)
+                remainingDuration -= elapsed
+            }
         }
         
         self.progress = 1.0
@@ -208,6 +254,7 @@ class PrintManager: ObservableObject {
     
     private func cleanup() async {
         isPrinting = false
+        isPaused = false
         currentPage = nil
         progress = 0
         timeRemaining = 0
