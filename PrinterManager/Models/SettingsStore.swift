@@ -27,6 +27,10 @@ class SettingsStore: ObservableObject {
     // MARK: - Private Properties
     private let defaults = UserDefaults.standard
     
+    /// load() sırasında didSet → save() henüz okunmamış ayarların üzerine
+    /// varsayılanları yazmasın
+    private var isLoading = false
+    
     private enum Keys {
         static let selectedPrinter = "selectedPrinter"
         static let printDelaySeconds = "printDelaySeconds"
@@ -44,6 +48,9 @@ class SettingsStore: ObservableObject {
     // MARK: - Private Methods
     
     private func load() {
+        isLoading = true
+        defer { isLoading = false }
+        
         selectedPrinter = defaults.string(forKey: Keys.selectedPrinter)
         
         let savedPrintDelay = defaults.integer(forKey: Keys.printDelaySeconds)
@@ -57,6 +64,8 @@ class SettingsStore: ObservableObject {
     }
     
     private func save() {
+        guard !isLoading else { return }
+        
         defaults.set(selectedPrinter, forKey: Keys.selectedPrinter)
         defaults.set(printDelaySeconds, forKey: Keys.printDelaySeconds)
         defaults.set(cleanDelaySeconds, forKey: Keys.cleanDelaySeconds)
