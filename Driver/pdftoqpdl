@@ -1,0 +1,193 @@
+#!/bin/sh
+# CUPS filtresi: application/vnd.cups-pdf -> Samsung CLP-300 QPDL (ham veri)
+#
+# PrinterManager'ın "kendi sürücü" hattının aynısı: Ghostscript + foo2qpdl,
+# foo2qpdl-wrapper'ın CLP-300 + A4 parametreleriyle. Böylece yazıcı her
+# uygulamadan (Önizleme, Safari...) Samsung'un eski filtresi olmadan basar.
+#
+# - Kopyalar, sayfa aralığı ve sayfa başına çoklu sayfa macOS'un cgpdftopdf
+#   filtresinde uygulanmış gelir; burada tekrar uygulanmaz.
+# - Her sayfa önce tam olarak üretilir, sorunsuzsa gönderilir: yazıcıya
+#   yarım (bozuk) veri gitmez.
+# - PageDelay: sayfalar arasında bekleme (belt temizliği). Elle çift yön
+#   için PrinterManager uygulaması kullanılır.
+#
+# Argümanlar (CUPS): iş-no kullanıcı başlık kopya seçenekler [dosya]
+
+set -f
+
+JOB_ID=$1
+OPTIONS=$5
+INPUT=${6:-}
+
+FILTER_DIR=$(cd "$(dirname "$0")" && pwd)
+FOO2QPDL="$FILTER_DIR/foo2qpdl"
+WORK="${TMPDIR:-/tmp}/pdftoqpdl-$JOB_ID-$$"
+
+# Bu boyutun üstündeki sayfa 600x600 ile yeniden üretilir (uygulamadaki eşik)
+LARGE_PAGE_BYTES=8000000
+
+log() {
+    echo "$1" >&2
+}
+
+cleanup() {
+    [ -n "${SLEEP_PID:-}" ] && kill "$SLEEP_PID" 2>/dev/null
+    rm -rf "$WORK"
+}
+trap 'cleanup; exit 0' TERM
+trap cleanup EXIT
+
+mkdir -p "$WORK" || exit 1
+
+# --- Araçlar ---------------------------------------------------------------
+
+GS=""
+for dir in /opt/homebrew/bin /usr/local/bin /opt/local/bin; do
+    if [ -x "$dir/gs" ]; then
+        GS="$dir/gs"
+        break
+    fi
+done
+if [ -z "$GS" ]; then
+    log "ERROR: Ghostscript bulunamadı. Terminal'de: brew install ghostscript"
+    exit 1
+fi
+if [ ! -x "$FOO2QPDL" ]; then
+    log "ERROR: foo2qpdl bulunamadı: $FOO2QPDL (sürücüyü PrinterManager'dan yeniden kurun)"
+    exit 1
+fi
+
+# --- Seçenekler: önce PPD varsayılanı, sonra işin seçenekleri ------------
+
+ppd_default() {
+    [ -n "${PPD:-}" ] && [ -r "$PPD" ] || return 0
+    sed -n "s/^\*Default$1:[[:space:]]*//p" "$PPD" | tr -d '\r"' | head -n 1
+}
+
+COLOR_MODEL=$(ppd_default ColorModel)
+RESOLUTION=$(ppd_default Resolution)
+PAGE_DELAY=$(ppd_default PageDelay)
+
+for option in $OPTIONS; do
+    case "$option" in
+    ColorModel=*)	COLOR_MODEL=${option#*=};;
+    Resolution=*)	RESOLUTION=${option#*=};;
+    PageDelay=*)	PAGE_DELAY=${option#*=};;
+    print-color-mode=monochrome|print-color-mode=process-monochrome)
+			COLOR_MODEL=Gray;;
+    print-color-mode=color)
+			COLOR_MODEL=Color;;
+    esac
+done
+
+case "$COLOR_MODEL" in
+Gray)	COLOR=no;;
+*)	COLOR=yes;;
+esac
+
+case "$PAGE_DELAY" in
+''|*[!0-9]*)	PAGE_DELAY=0;;
+esac
+
+# --- Girdi -----------------------------------------------------------------
+
+if [ -z "$INPUT" ]; then
+    INPUT="$WORK/input.pdf"
+    cat > "$INPUT" || exit 1
+fi
+
+PAGES=$("$GS" -q -dNODISPLAY -dSAFER -dPDFINFO "$INPUT" 2>&1 \
+    | sed -n 's/.*File has \([0-9][0-9]*\) page.*/\1/p' | head -n 1)
+if [ -z "$PAGES" ] || [ "$PAGES" -lt 1 ]; then
+    log "ERROR: PDF okunamadı (sayfa sayısı bulunamadı)"
+    exit 1
+fi
+
+# --- Sayfa üretimi -----------------------------------------------------------
+
+# render_page <sayfa> <çözünürlük> <çıktı>
+# gs | foo2qpdl > çıktı; ikisi de başarılıysa 0
+render_page() {
+    page=$1
+    res=$2
+    output=$3
+
+    # A4 raster boyutu ve kenar kırpması (wrapper: set_clipping 150 100 150 100)
+    case "$res" in
+    600x600)	xdim=4960; ydim=7016; clipx=75;;
+    1200x1200)	xdim=9920; ydim=14032; clipx=150;;
+    *)		res=1200x600; xdim=9920; ydim=7016; clipx=150;;
+    esac
+
+    if [ "$COLOR" = yes ]; then
+        device=bitcmyk
+        color_flags="-c -B -A"
+    else
+        device=pbmraw
+        color_flags=""
+    fi
+
+    rm -f "$WORK/gs.status"
+    {
+        "$GS" -q -dBATCH -dSAFER -dQUIET -dNOPAUSE -sstdout=%stderr \
+            -sPAPERSIZE=a4 -g${xdim}x${ydim} -r$res -sDEVICE=$device \
+            -dCOLORSCREEN -dMaxBitmap=500000000 \
+            -dFIXEDMEDIA -dPDFFitPage \
+            -sOutputFile=- -dFirstPage=$page -dLastPage=$page "$INPUT" \
+            2> "$WORK/gs.log"
+        echo $? > "$WORK/gs.status"
+    } | "$FOO2QPDL" -r$res -g${xdim}x${ydim} -p2 -m0 -n1 -d1 -s1 -z0 $color_flags \
+            -u ${clipx}x100 -l ${clipx}x100 -a50,50,50,50,50,50 \
+            -J "" -U "" -D0 > "$output" 2> "$WORK/foo2qpdl.log"
+    encoder_status=$?
+
+    if [ "$(cat "$WORK/gs.status" 2>/dev/null)" != 0 ]; then
+        log "ERROR: Ghostscript sayfa $page'yi çeviremedi: $(tail -n 3 "$WORK/gs.log" | tr '\n' ' ')"
+        return 1
+    fi
+    if [ "$encoder_status" != 0 ] || [ ! -s "$output" ]; then
+        log "ERROR: foo2qpdl sayfa $page için veri üretemedi: $(tail -n 3 "$WORK/foo2qpdl.log" | tr '\n' ' ')"
+        return 1
+    fi
+    if [ -s "$WORK/gs.log" ]; then
+        log "DEBUG: Ghostscript (sayfa $page): $(head -n 3 "$WORK/gs.log" | tr '\n' ' ')"
+    fi
+    return 0
+}
+
+RESOLUTION=${RESOLUTION%dpi}
+log "INFO: $PAGES sayfa, $RESOLUTION dpi, $( [ "$COLOR" = yes ] && echo renkli || echo siyah-beyaz ), sayfa arası $PAGE_DELAY sn"
+
+page=1
+while [ "$page" -le "$PAGES" ]; do
+    log "INFO: Sayfa $page/$PAGES hazırlanıyor"
+    output="$WORK/page.qpdl"
+
+    render_page "$page" "$RESOLUTION" "$output" || exit 1
+
+    size=$(wc -c < "$output" | tr -d ' ')
+    if [ "$size" -gt "$LARGE_PAGE_BYTES" ] && [ "$RESOLUTION" != 600x600 ]; then
+        log "INFO: Sayfa $page çok büyük ($size bayt), 600x600 ile yeniden hazırlanıyor"
+        render_page "$page" 600x600 "$output" || exit 1
+        size=$(wc -c < "$output" | tr -d ' ')
+    fi
+    log "DEBUG: Sayfa $page: $size bayt"
+
+    cat "$output" || exit 1
+    echo "PAGE: $page 1" >&2
+
+    if [ "$page" -lt "$PAGES" ] && [ "$PAGE_DELAY" -gt 0 ]; then
+        log "INFO: Sayfa $page/$PAGES gönderildi, belt temizliği için $PAGE_DELAY sn bekleniyor"
+        # wait, iptal (SIGTERM) gelince hemen dönsün diye arka planda
+        sleep "$PAGE_DELAY" &
+        SLEEP_PID=$!
+        wait "$SLEEP_PID"
+        SLEEP_PID=""
+    fi
+
+    page=$((page + 1))
+done
+
+log "INFO: $PAGES sayfa gönderildi"
+exit 0

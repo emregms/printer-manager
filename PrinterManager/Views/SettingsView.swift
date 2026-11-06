@@ -36,10 +36,20 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.menu)
                     .labelsHidden()
+                    
+                    // Yeni bir Mac'te yazıcı henüz eklenmemişse
+                    if !availablePrinters.contains(where: { $0.range(of: "CLP-?300", options: [.regularExpression, .caseInsensitive]) != nil }) {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("CLP-300 ekli değil. Ayarlar'daki \"macOS Sürücüsü\" bölümünden ekleyebilirsiniz.")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                            settingsButton
+                        }
+                    }
                 }
-            
+                
                 Divider()
-            
+                
                 // Yazdırma Süresi
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -209,8 +219,10 @@ struct SettingsView: View {
         }
         .onChange(of: settingsStore.ghostscriptPath) { _ in refreshToolStatus() }
         .onChange(of: settingsStore.foo2qpdlPath) { _ in refreshToolStatus() }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            // Ghostscript Terminal'den kurulduysa uygulamaya dönünce görünsün
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            // Ghostscript Terminal'den ya da yazıcı Ayarlar penceresinden eklendiyse
+            // bu pencereye dönünce görünsün
+            availablePrinters = PrinterService.shared.availablePrinters()
             refreshToolStatus()
         }
     }

@@ -17,6 +17,10 @@ struct DriverSettingsView: View {
                           prompt: Text("Otomatik: seçili yazıcının kuyruğu"))
                 
                 DriverToolStatusView(status: toolStatus, showPaths: true)
+                
+                if toolStatus?.ghostscriptVersion == nil {
+                    GhostscriptInstallView(onFinished: refresh)
+                }
             } header: {
                 Text("Kendi Sürücü")
             } footer: {
@@ -24,6 +28,8 @@ struct DriverSettingsView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+            
+            DriverInstallSection()
             
             Section("Lisans") {
                 Text("foo2qpdl, foo2zjs projesinden (Rick Richardson) alınmıştır ve GPL-2.0 lisanslıdır. Uygulama onu ayrı bir program olarak çalıştırır; kaynak kodu ve lisans metni repodaki ThirdParty/foo2qpdl klasöründedir.")
@@ -43,6 +49,237 @@ struct DriverSettingsView: View {
             ghostscriptPath: settingsStore.ghostscriptPath,
             foo2qpdlPath: settingsStore.foo2qpdlPath
         )
+    }
+}
+
+/// macOS sürücüsü: CLP-300'ü Yazıcılar ve Tarayıcılar'a ekler
+struct DriverInstallSection: View {
+    @State private var status: DriverInstaller.Status?
+    @State private var selectedURI: String?
+    @State private var isWorking = false
+    @State private var message: String?
+    @State private var messageIsError = false
+    
+    /// Sürücü (CUPS filtresi) ayardaki yolu bilmez; gs standart yerlerden birinde olmalı
+    private var ghostscriptReady: Bool {
+        ToolLocator.ghostscript(customPath: "") != nil
+    }
+    
+    var body: some View {
+        Section {
+            if let status = status {
+                LabeledContent("Sürücü") {
+                    if status.isDriverInstalled {
+                        Label(status.queues.isEmpty ? "Kurulu (kuyruk yok)" : "Kurulu: \(status.queues.joined(separator: ", "))",
+                              systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                    } else {
+                        Text("Kurulu değil")
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                LabeledContent("USB'deki yazıcı") {
+                    if status.deviceURIs.isEmpty {
+                        Text("Bulunamadı. Yazıcı açık ve USB'ye bağlı mı?")
+                            .foregroundColor(.orange)
+                    } else if status.deviceURIs.count == 1 {
+                        Text(status.deviceURIs[0])
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                    } else {
+                        Picker("", selection: $selectedURI) {
+                            ForEach(status.deviceURIs, id: \.self) { uri in
+                                Text(uri).tag(uri as String?)
+                            }
+                        }
+                        .labelsHidden()
+                    }
+                }
+                
+                if !ghostscriptReady {
+                    Text("Sürücü sayfaları Ghostscript ile hazırlar; önce yukarıdan Ghostscript'i kurun.")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+                
+                HStack {
+                    Button(status.isDriverInstalled ? "Sürücüyü Güncelle" : "Sürücüyü Kur ve Yazıcıyı Ekle") {
+                        install(status)
+                    }
+                    .disabled(isWorking || status.deviceURIs.isEmpty || !ghostscriptReady)
+                    
+                    if status.isDriverInstalled || !status.queues.isEmpty {
+                        Button("Kaldır", role: .destructive) {
+                            uninstall(status)
+                        }
+                        .disabled(isWorking)
+                    }
+                    
+                    Spacer()
+                    
+                    if isWorking {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                    Button {
+                        Task { await refresh() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Yenile")
+                    .disabled(isWorking)
+                }
+            } else {
+                ProgressView()
+                    .controlSize(.small)
+            }
+            
+            if let message = message {
+                Text(message)
+                    .font(.caption)
+                    .foregroundColor(messageIsError ? .red : .green)
+                    .textSelection(.enabled)
+            }
+        } header: {
+            Text("macOS Sürücüsü")
+        } footer: {
+            Text("""
+            Kurulunca CLP-300, Yazıcılar ve Tarayıcılar'da görünür ve her uygulamadan \
+            (Önizleme, Safari...) yazdırılabilir; Samsung'un eski sürücüsü gerekmez. \
+            Sayfa arası bekleme, yazdırma penceresindeki "Sayfa Arası Bekleme" seçeneğiyle \
+            ayarlanır (varsayılan 40 sn). Elle çift yön için PrinterManager'ı kullanın. \
+            Kurulum yönetici şifresi ister; var olan yazıcı kuyruklarına dokunulmaz.
+            """)
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+        .task { await refresh() }
+    }
+    
+    private func refresh() async {
+        let current = await Task.detached { DriverInstaller.currentStatus() }.value
+        status = current
+        if selectedURI == nil || !current.deviceURIs.contains(selectedURI ?? "") {
+            selectedURI = current.deviceURIs.first
+        }
+    }
+    
+    private func install(_ status: DriverInstaller.Status) {
+        guard let uri = selectedURI ?? status.deviceURIs.first else { return }
+        let target = DriverInstaller.suggestedQueue(status: status)
+        run {
+            _ = try DriverInstaller.install(deviceURI: uri, queue: target.name, description: target.description)
+            return "✓ \"\(target.description)\" eklendi (kuyruk: \(target.name)). Yazıcılar ve Tarayıcılar'da görünür."
+        }
+    }
+    
+    private func uninstall(_ status: DriverInstaller.Status) {
+        run {
+            _ = try DriverInstaller.uninstall(queues: status.queues)
+            return "✓ Sürücü kaldırıldı" + (status.queues.isEmpty ? "" : " (\(status.queues.joined(separator: ", ")))")
+        }
+    }
+    
+    /// Yetkili işlemi çalıştırır (şifre penceresi ana iş parçacığında açılır)
+    private func run(_ operation: @escaping () throws -> String) {
+        isWorking = true
+        message = nil
+        Task { @MainActor in
+            do {
+                message = try operation()
+                messageIsError = false
+            } catch {
+                message = error.localizedDescription
+                messageIsError = true
+            }
+            await refresh()
+            isWorking = false
+        }
+    }
+}
+
+/// Ghostscript yoksa Homebrew ile kurar
+struct GhostscriptInstallView: View {
+    let onFinished: () -> Void
+    
+    @State private var isInstalling = false
+    @State private var output: String?
+    
+    private var brew: URL? {
+        ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"]
+            .first(where: { FileManager.default.isExecutableFile(atPath: $0) })
+            .map { URL(fileURLWithPath: $0) }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let brew = brew {
+                HStack {
+                    Button("Ghostscript'i Kur (Homebrew)") {
+                        install(with: brew)
+                    }
+                    .disabled(isInstalling)
+                    if isInstalling {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Kuruluyor, 1–2 dakika sürebilir...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            } else {
+                Text("Homebrew kurulu değil. Önce brew.sh adresindeki komutla Homebrew'u, sonra Ghostscript'i kurun.")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                Link("brew.sh", destination: URL(string: "https://brew.sh")!)
+                    .font(.caption)
+            }
+            
+            if let output = output {
+                Text(output)
+                    .font(.caption2.monospaced())
+                    .foregroundColor(.secondary)
+                    .lineLimit(4)
+                    .textSelection(.enabled)
+            }
+        }
+    }
+    
+    private func install(with brew: URL) {
+        isInstalling = true
+        output = nil
+        Task {
+            let result = await Task.detached { () -> String in
+                let logURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("brew-install-ghostscript.log")
+                FileManager.default.createFile(atPath: logURL.path, contents: nil)
+                guard let log = try? FileHandle(forWritingTo: logURL) else { return "Günlük dosyası açılamadı" }
+                defer { try? log.close() }
+                
+                let process = Process()
+                process.executableURL = brew
+                process.arguments = ["install", "ghostscript"]
+                var environment = ProcessInfo.processInfo.environment
+                environment["PATH"] = "\(brew.deletingLastPathComponent().path):/usr/bin:/bin:/usr/sbin:/sbin"
+                process.environment = environment
+                process.standardOutput = log
+                process.standardError = log
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                } catch {
+                    return "brew çalıştırılamadı: \(error.localizedDescription)"
+                }
+                let text = (try? String(contentsOf: logURL, encoding: .utf8)) ?? ""
+                let tail = text.split(separator: "\n").suffix(3).joined(separator: "\n")
+                return process.terminationStatus == 0 ? "✓ Kuruldu\n\(tail)" : "brew hata verdi (kod \(process.terminationStatus)):\n\(tail)"
+            }.value
+            output = result
+            isInstalling = false
+            onFinished()
+        }
     }
 }
 

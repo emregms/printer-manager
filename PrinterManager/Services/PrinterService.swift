@@ -36,6 +36,21 @@ class PrinterService {
         return guess
     }
     
+    /// Tüm CUPS kuyruk adları
+    func allQueues() -> [String] {
+        run("/usr/bin/lpstat", ["-e"])?
+            .split(separator: "\n").map(String.init) ?? []
+    }
+    
+    /// USB'ye bağlı CLP-300'lerin aygıt adresleri (usb://Samsung/CLP-300?serial=...)
+    func connectedCLP300DeviceURIs() -> [String] {
+        let output = run("/usr/sbin/lpinfo", ["--include-schemes", "usb", "-v"]) ?? ""
+        return output
+            .split(separator: "\n")
+            .compactMap { line in line.split(separator: " ").last.map(String.init) }
+            .filter { $0.range(of: "CLP-?300", options: [.regularExpression, .caseInsensitive]) != nil }
+    }
+    
     /// Kuyruğun durumunu okur. `lpstat` çıktısı sistem diline göre çevrildiği için
     /// dilden bağımsız `lpoptions` alanları kullanılır.
     func queueStatus(_ queue: String) -> PrinterQueueStatus? {
