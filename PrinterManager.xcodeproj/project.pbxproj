@@ -17,6 +17,7 @@
 		008 /* PrinterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108; };
 		009 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109; };
 		010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 110; };
+		011 /* QPDLDriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +33,7 @@
 		109 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		110 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		111 /* PrinterManager.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PrinterManager.entitlements; sourceTree = "<group>"; };
+		112 /* QPDLDriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QPDLDriver.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +101,7 @@
 				106 /* PrintManager.swift */,
 				107 /* PDFProcessor.swift */,
 				108 /* PrinterService.swift */,
+				112 /* QPDLDriver.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -232,6 +235,7 @@
 				007 /* PDFProcessor.swift in Sources */,
 				008 /* PrinterService.swift in Sources */,
 				009 /* SettingsStore.swift in Sources */,
+				011 /* QPDLDriver.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
