@@ -57,10 +57,17 @@ class PrinterService {
         let attributes = queueAttributes(queue)
         guard !attributes.isEmpty else { return nil }
         
-        // lpstat -o satırları: "<kuyruk>-<iş no> <kullanıcı> <boyut> <tarih>"
-        let pendingJobs = run("/usr/bin/lpstat", ["-o", queue])?
-            .split(separator: "\n")
-            .compactMap { $0.split(separator: " ").first.map(String.init) } ?? []
+        // Bekletilen (held) işler basılmayı beklemiyor: PrinterManager kuyruğunda
+        // bunlar başka uygulamalardan gelen, uygulamada açılacak belgeler
+        let pendingJobs: [String]
+        if let jobs = CupsJobs.activeJobs(queue: queue) {
+            pendingJobs = jobs.filter { $0.state != "held" }.map { "\(queue)-\($0.id)" }
+        } else {
+            // lpstat -o satırları: "<kuyruk>-<iş no> <kullanıcı> <boyut> <tarih>"
+            pendingJobs = run("/usr/bin/lpstat", ["-o", queue])?
+                .split(separator: "\n")
+                .compactMap { $0.split(separator: " ").first.map(String.init) } ?? []
+        }
         
         return PrinterQueueStatus(
             queue: queue,
@@ -95,12 +102,14 @@ class PrinterService {
     
     /// Hazır yazıcı verisini (QPDL) filtresiz, ham olarak gönderir.
     /// `-o raw` sistem sürücüsünün filtre zincirini tamamen atlar.
+    /// `-H immediate`: PrinterManager kuyruğu gelen işleri varsayılan olarak
+    /// bekletir; uygulamanın kendi işleri beklemeden basılsın.
     /// - Parameters:
     ///   - url: Ham dosya (.zc / .zm)
     ///   - queue: CUPS kuyruk adı
     ///   - title: Kuyrukta görünecek iş adı
     func printRaw(at url: URL, queue: String, title: String) async throws {
-        try submit(["-d", queue, "-o", "raw", "-t", title, url.path])
+        try submit(["-d", queue, "-o", "raw", "-H", "immediate", "-t", title, url.path])
     }
     
     /// Tek sayfalık PDF'i belirtilen yazıcıya yazdırır
@@ -112,8 +121,8 @@ class PrinterService {
         // CUPS formatına dönüştür
         let cupsName = cupsQueueName(for: printerName)
         
-        // lp komutu ile yazdır
-        var arguments = ["-d", cupsName]
+        // lp komutu ile yazdır (-H immediate: PrinterManager kuyruğu işleri bekletir)
+        var arguments = ["-d", cupsName, "-H", "immediate"]
         
         // Siyah beyaz modu
         if grayscale {

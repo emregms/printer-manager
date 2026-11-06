@@ -1,14 +1,16 @@
 *PPD-Adobe: "4.3"
 *%
-*% Samsung CLP-300 - PrinterManager driver (Ghostscript + foo2qpdl)
+*% Samsung CLP-300 - PrinterManager
 *% https://github.com/emregms/printer-manager
 *%
-*% Pages are converted by /Library/Printers/PrinterManager/Filters/pdftoqpdl,
-*% which uses the parameters of foo2zjs' foo2qpdl-wrapper for the CLP-300
-*% (-z0, A4). Copies, page ranges and N-up are applied by macOS cgpdftopdf.
+*% Jobs sent to this queue are held (job-hold-until-default=indefinite) and
+*% opened in PrinterManager, which prints them with a delay between pages
+*% (the CLP-300's transfer belt cleaner needs it) and manual duplex, sending
+*% ready QPDL data raw. The filter below only runs if a held job is released
+*% by hand; it tells the user to use PrinterManager instead.
 *%
 *FormatVersion: "4.3"
-*FileVersion: "1.0"
+*FileVersion: "2.0"
 *LanguageVersion: English
 *LanguageEncoding: ISOLatin1
 *PCFileName: "CLP300PM.PPD"
@@ -16,7 +18,7 @@
 *Product: "(CLP-300)"
 *ModelName: "Samsung CLP-300 PrinterManager"
 *ShortNickName: "Samsung CLP-300 PrinterManager"
-*NickName: "Samsung CLP-300 PrinterManager (foo2qpdl)"
+*NickName: "Samsung CLP-300 PrinterManager"
 *1284DeviceID: "MFG:Samsung;CMD:SPLC;MDL:CLP-300;CLS:PRINTER;"
 *PSVersion: "(3010.000) 0"
 *LanguageLevel: "3"
@@ -27,9 +29,8 @@
 *LandscapeOrientation: Plus90
 *TTRasterizer: Type42
 *cupsVersion: 2.3
-*cupsLanguages: "tr"
 *cupsManualCopies: True
-*cupsFilter2: "application/vnd.cups-pdf application/vnd.cups-raw 0 /Library/Printers/PrinterManager/Filters/pdftoqpdl"
+*cupsFilter2: "application/vnd.cups-pdf application/vnd.cups-raw 0 /Library/Printers/PrinterManager/Filters/pminbox"
 
 *OpenUI *PageSize/Media Size: PickOne
 *OrderDependency: 10 AnySetup *PageSize
@@ -48,50 +49,6 @@
 *ImageableArea A4/A4: "9 12 586 830"
 *DefaultPaperDimension: A4
 *PaperDimension A4/A4: "595 842"
-
-*OpenUI *ColorModel/Color Mode: PickOne
-*OrderDependency: 20 AnySetup *ColorModel
-*DefaultColorModel: Color
-*ColorModel Color/Color: ""
-*ColorModel Gray/Grayscale: ""
-*CloseUI: *ColorModel
-
-*OpenUI *Resolution/Quality: PickOne
-*OrderDependency: 20 AnySetup *Resolution
-*DefaultResolution: 1200x600dpi
-*Resolution 600x600dpi/600 dpi (fast): ""
-*Resolution 1200x600dpi/1200x600 dpi (recommended): ""
-*Resolution 1200x1200dpi/1200x1200 dpi (best): ""
-*CloseUI: *Resolution
-
-*OpenUI *PageDelay/Delay Between Pages: PickOne
-*OrderDependency: 30 AnySetup *PageDelay
-*DefaultPageDelay: 40
-*PageDelay 0/Off: ""
-*PageDelay 20/20 seconds: ""
-*PageDelay 30/30 seconds: ""
-*PageDelay 40/40 seconds: ""
-*PageDelay 60/60 seconds: ""
-*CloseUI: *PageDelay
-
-*% Turkish
-*tr.Translation PageSize/Kağıt Boyutu: ""
-*tr.PageSize A4/A4: ""
-*tr.Translation PageRegion/Kağıt Boyutu: ""
-*tr.PageRegion A4/A4: ""
-*tr.Translation ColorModel/Renk: ""
-*tr.ColorModel Color/Renkli: ""
-*tr.ColorModel Gray/Siyah-beyaz: ""
-*tr.Translation Resolution/Kalite: ""
-*tr.Resolution 600x600dpi/600 dpi (hızlı): ""
-*tr.Resolution 1200x600dpi/1200x600 dpi (önerilen): ""
-*tr.Resolution 1200x1200dpi/1200x1200 dpi (en iyi): ""
-*tr.Translation PageDelay/Sayfa Arası Bekleme (belt temizliği): ""
-*tr.PageDelay 0/Kapalı: ""
-*tr.PageDelay 20/20 saniye: ""
-*tr.PageDelay 30/30 saniye: ""
-*tr.PageDelay 40/40 saniye: ""
-*tr.PageDelay 60/60 saniye: ""
 
 *DefaultFont: Courier
 *Font Courier: Standard "(002.004S)" Standard ROM

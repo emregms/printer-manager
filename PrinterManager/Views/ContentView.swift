@@ -120,6 +120,22 @@ struct ContentView: View {
         .onReceive(printManager.$showFlipPagesDialog) { show in
             showFlipPagesAlert = show
         }
+        // Başka uygulamalardan (CLP-300 kuyruğu, PDF menüsü, Finder) gelen belgeler
+        .onAppear {
+            PrintInbox.shared.printManager = printManager
+            PrintInbox.shared.start()
+        }
+        .onReceive(PrintInbox.shared.$pending) { document in
+            if let document = document {
+                openIncoming(document)
+            }
+        }
+        .onChange(of: printManager.isPrinting) { isPrinting in
+            // Yazdırma sürerken gelen belge bitince açılsın
+            if !isPrinting, let document = PrintInbox.shared.pending {
+                openIncoming(document)
+            }
+        }
         .animation(.easeInOut, value: printManager.isPrinting)
     }
     
@@ -137,6 +153,20 @@ struct ContentView: View {
                 grayscale: settingsStore.grayscaleMode,
                 driver: settingsStore.driverSettings
             )
+        }
+    }
+    
+    private func openIncoming(_ document: IncomingDocument) {
+        // Yazdırma sürerken belgeyi değiştirme; bitince onChange açar
+        guard !printManager.isPrinting else { return }
+        
+        selectedPDF?.stopAccessingSecurityScopedResource()
+        selectedPDF = document.url
+        PrintInbox.shared.markTaken()
+        
+        printManager.addLog("PDF yüklendi: \(document.title) (\(document.source))")
+        if let pageCount = PDFProcessor.shared.pageCount(of: document.url) {
+            printManager.addLog("Sayfa sayısı: \(pageCount)")
         }
     }
     

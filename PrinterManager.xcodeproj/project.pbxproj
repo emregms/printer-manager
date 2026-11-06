@@ -20,9 +20,10 @@
 		011 /* QPDLDriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112; };
 		012 /* DriverSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113; };
 		013 /* DriverInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114; };
-		014 /* pdftoqpdl in Resources */ = {isa = PBXBuildFile; fileRef = 115; };
+		014 /* pminbox in Resources */ = {isa = PBXBuildFile; fileRef = 115; };
 		015 /* Samsung-CLP-300-PrinterManager.ppd in Resources */ = {isa = PBXBuildFile; fileRef = 116; };
 		016 /* install-driver.sh in Resources */ = {isa = PBXBuildFile; fileRef = 117; };
+		017 /* PrintInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,9 +42,12 @@
 		112 /* QPDLDriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QPDLDriver.swift; sourceTree = "<group>"; };
 		113 /* DriverSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverSettingsView.swift; sourceTree = "<group>"; };
 		114 /* DriverInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverInstaller.swift; sourceTree = "<group>"; };
-		115 /* pdftoqpdl */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = pdftoqpdl; sourceTree = "<group>"; };
+		115 /* pminbox */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = pminbox; sourceTree = "<group>"; };
 		116 /* Samsung-CLP-300-PrinterManager.ppd */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Samsung-CLP-300-PrinterManager.ppd"; sourceTree = "<group>"; };
 		117 /* install-driver.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "install-driver.sh"; sourceTree = "<group>"; };
+		118 /* cups-jobs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "cups-jobs.c"; sourceTree = "<group>"; };
+		119 /* build-helpers.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "build-helpers.sh"; sourceTree = "<group>"; };
+		120 /* PrintInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintInbox.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,9 +73,11 @@
 		308 /* Driver */ = {
 			isa = PBXGroup;
 			children = (
-				115 /* pdftoqpdl */,
+				115 /* pminbox */,
 				116 /* Samsung-CLP-300-PrinterManager.ppd */,
 				117 /* install-driver.sh */,
+				118 /* cups-jobs.c */,
+				119 /* build-helpers.sh */,
 			);
 			path = Driver;
 			sourceTree = "<group>";
@@ -125,6 +131,7 @@
 				108 /* PrinterService.swift */,
 				112 /* QPDLDriver.swift */,
 				114 /* DriverInstaller.swift */,
+				120 /* PrintInbox.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -156,6 +163,7 @@
 				200 /* Frameworks */,
 				402 /* Resources */,
 				403 /* Build foo2qpdl */,
+				404 /* Build cups-jobs */,
 			);
 			buildRules = (
 			);
@@ -206,7 +214,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				010 /* Assets.xcassets in Resources */,
-				014 /* pdftoqpdl in Resources */,
+				014 /* pminbox in Resources */,
 				015 /* Samsung-CLP-300-PrinterManager.ppd in Resources */,
 				016 /* install-driver.sh in Resources */,
 			);
@@ -245,6 +253,29 @@
 			shellScript = "/bin/sh \"${SRCROOT}/ThirdParty/foo2qpdl/build-helper.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		404 /* Build cups-jobs */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 0;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Driver/build-helpers.sh",
+				"$(SRCROOT)/Driver/cups-jobs.c",
+			);
+			name = "Build cups-jobs";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/cups-jobs",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/sh \"${SRCROOT}/Driver/build-helpers.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -264,6 +295,7 @@
 				011 /* QPDLDriver.swift in Sources */,
 				012 /* DriverSettingsView.swift in Sources */,
 				013 /* DriverInstaller.swift in Sources */,
+				017 /* PrintInbox.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

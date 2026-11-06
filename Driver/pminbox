@@ -1,0 +1,15 @@
+#!/bin/sh
+# CUPS filtresi: bu kuyruğa gelen belgeleri basmaz, PrinterManager'a yönlendirir.
+#
+# Kuyruk işleri varsayılan olarak bekletir (job-hold-until-default=indefinite).
+# PrinterManager bekleyen işi alır, kendi penceresinde açar ve sayfa arası
+# bekleme (belt temizliği) ve elle çift yönle basar; yazıcıya ham veri
+# gönderdiği için bu filtre o işlerde hiç çalışmaz.
+#
+# Bu filtre yalnızca bekletilen bir iş Yazdırma Sırası penceresinden elle
+# serbest bırakılırsa çalışır. macOS yazdırma sistemi filtreleri kısıtlı bir
+# ortamda çalıştırdığı için Ghostscript'e buradan ulaşılamıyor; bu yüzden
+# baskı burada yapılmaz.
+
+echo "ERROR: Bu yazıcıya gelen belgeler PrinterManager'da açılır. PrinterManager'ı açın ve belgeyi yeniden yazdırın." >&2
+exit 1

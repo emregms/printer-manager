@@ -31,6 +31,8 @@ struct DriverSettingsView: View {
             
             DriverInstallSection()
             
+            OtherAppsSection()
+            
             Section("Lisans") {
                 Text("foo2qpdl, foo2zjs projesinden (Rick Richardson) alınmıştır ve GPL-2.0 lisanslıdır. Uygulama onu ayrı bir program olarak çalıştırır; kaynak kodu ve lisans metni repodaki ThirdParty/foo2qpdl klasöründedir.")
                     .font(.caption)
@@ -59,11 +61,6 @@ struct DriverInstallSection: View {
     @State private var isWorking = false
     @State private var message: String?
     @State private var messageIsError = false
-    
-    /// Sürücü (CUPS filtresi) ayardaki yolu bilmez; gs standart yerlerden birinde olmalı
-    private var ghostscriptReady: Bool {
-        ToolLocator.ghostscript(customPath: "") != nil
-    }
     
     var body: some View {
         Section {
@@ -97,17 +94,11 @@ struct DriverInstallSection: View {
                     }
                 }
                 
-                if !ghostscriptReady {
-                    Text("Sürücü sayfaları Ghostscript ile hazırlar; önce yukarıdan Ghostscript'i kurun.")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                }
-                
                 HStack {
                     Button(status.isDriverInstalled ? "Sürücüyü Güncelle" : "Sürücüyü Kur ve Yazıcıyı Ekle") {
                         install(status)
                     }
-                    .disabled(isWorking || status.deviceURIs.isEmpty || !ghostscriptReady)
+                    .disabled(isWorking || status.deviceURIs.isEmpty)
                     
                     if status.isDriverInstalled || !status.queues.isEmpty {
                         Button("Kaldır", role: .destructive) {
@@ -146,10 +137,10 @@ struct DriverInstallSection: View {
             Text("macOS Sürücüsü")
         } footer: {
             Text("""
-            Kurulunca CLP-300, Yazıcılar ve Tarayıcılar'da görünür ve her uygulamadan \
-            (Önizleme, Safari...) yazdırılabilir; Samsung'un eski sürücüsü gerekmez. \
-            Sayfa arası bekleme, yazdırma penceresindeki "Sayfa Arası Bekleme" seçeneğiyle \
-            ayarlanır (varsayılan 40 sn). Elle çift yön için PrinterManager'ı kullanın. \
+            Kurulunca CLP-300, Yazıcılar ve Tarayıcılar'da görünür; Samsung'un eski sürücüsü \
+            gerekmez. Safari, Önizleme gibi bir uygulamada bu yazıcıyla "Yazdır" dediğinizde \
+            belge basılmaz, PrinterManager'da açılır: buradan sayfa arası bekleme ve elle çift \
+            yönle basarsınız. PrinterManager kapalıysa belge kuyrukta bekler, açınca gelir. \
             Kurulum yönetici şifresi ister; var olan yazıcı kuyruklarına dokunulmaz.
             """)
             .font(.caption)
@@ -195,8 +186,71 @@ struct DriverInstallSection: View {
                 messageIsError = true
             }
             await refresh()
+            PrintInbox.shared.refreshQueues()
             isWorking = false
         }
+    }
+}
+
+/// Başka uygulamalardan PrinterManager'a belge getiren kısayollar
+struct OtherAppsSection: View {
+    @State private var hasPDFService = PrintInbox.isPDFServiceInstalled
+    @State private var opensAtLogin = PrintInbox.opensAtLogin
+    @State private var message: String?
+    
+    var body: some View {
+        Section {
+            Toggle("Yazdırma penceresinin PDF menüsüne \"PrinterManager ile Yazdır\" ekle", isOn: Binding(
+                get: { hasPDFService },
+                set: { setPDFService($0) }
+            ))
+            Toggle("Oturum açılınca PrinterManager'ı başlat", isOn: Binding(
+                get: { opensAtLogin },
+                set: { setOpensAtLogin($0) }
+            ))
+            
+            if let message = message {
+                Text(message)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .textSelection(.enabled)
+            }
+        } header: {
+            Text("Başka Uygulamalardan Yazdırma")
+        } footer: {
+            Text("""
+            PDF menüsü: herhangi bir uygulamada ⌘P → sol alttaki PDF ▾ → "PrinterManager ile Yazdır"; \
+            hangi yazıcı seçili olursa olsun belge PrinterManager'da açılır. \
+            Oturum açılınca başlatma: CLP-300 yazıcısına gönderilen belgeler, PrinterManager \
+            açık değilse kuyrukta bekler; uygulama hep açık olursa hemen gelir.
+            """)
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+    }
+    
+    private func setPDFService(_ enabled: Bool) {
+        do {
+            if enabled {
+                try PrintInbox.installPDFService()
+            } else {
+                try PrintInbox.removePDFService()
+            }
+            message = nil
+        } catch {
+            message = "PDF menüsü ayarlanamadı: \(error.localizedDescription)"
+        }
+        hasPDFService = PrintInbox.isPDFServiceInstalled
+    }
+    
+    private func setOpensAtLogin(_ enabled: Bool) {
+        do {
+            try PrintInbox.setOpensAtLogin(enabled)
+            message = nil
+        } catch {
+            message = "Oturum açılışı ayarlanamadı: \(error.localizedDescription)"
+        }
+        opensAtLogin = PrintInbox.opensAtLogin
     }
 }
 

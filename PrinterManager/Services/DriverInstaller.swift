@@ -1,14 +1,16 @@
 import Foundation
 
-/// CLP-300 için macOS sürücüsünü (CUPS filtresi + PPD) kurar ve yazıcıyı
-/// Yazıcılar ve Tarayıcılar'a ekler. Böylece her uygulamadan yazdırılabilir;
-/// Samsung'un eski sürücüsüne gerek kalmaz.
+/// CLP-300'ü Yazıcılar ve Tarayıcılar'a "PrinterManager" kuyruğu olarak ekler.
+/// Başka uygulamalardan bu yazıcıya gönderilen belgeler basılmadan bekletilir
+/// ve PrintInbox tarafından PrinterManager'da açılır (sayfa arası bekleme ve
+/// elle çift yön için). PrinterManager'ın kendi ham işleri aynı kuyruktan
+/// beklemeden geçer. Samsung'un eski sürücüsüne gerek kalmaz.
 ///
 /// Kurulum `Driver/install-driver.sh` ile root olarak yapılır; yetki macOS'un
 /// yönetici şifresi penceresiyle istenir.
 enum DriverInstaller {
     static let installDirectory = "/Library/Printers/PrinterManager"
-    static let filterPath = installDirectory + "/Filters/pdftoqpdl"
+    static let filterPath = installDirectory + "/Filters/pminbox"
     
     /// Bizim PPD'nin NickName'i bunu içerir (printer-make-and-model)
     private static let modelMarker = "PrinterManager"
@@ -26,15 +28,19 @@ enum DriverInstaller {
     
     /// Kuyrukları ve USB'yi sorgular (~1 sn); ana iş parçacığında çağırmayın
     static func currentStatus() -> Status {
+        Status(
+            isDriverInstalled: FileManager.default.isExecutableFile(atPath: filterPath),
+            queues: inboxQueues(),
+            deviceURIs: PrinterService.shared.connectedCLP300DeviceURIs()
+        )
+    }
+    
+    /// Bizim PPD ile kurulmuş kuyruklar (gelen işleri bekleten); ana iş parçacığında çağırmayın
+    static func inboxQueues() -> [String] {
         let service = PrinterService.shared
-        let queues = service.allQueues().filter { queue in
+        return service.allQueues().filter { queue in
             service.queueStatus(queue)?.makeAndModel.contains(modelMarker) == true
         }
-        return Status(
-            isDriverInstalled: FileManager.default.isExecutableFile(atPath: filterPath),
-            queues: queues,
-            deviceURIs: service.connectedCLP300DeviceURIs()
-        )
     }
     
     /// Yeni kuyruğun adı: varsa bizimkini güncelle; "Samsung_CLP_300" başka bir
@@ -56,19 +62,19 @@ enum DriverInstaller {
         guard let resources = Bundle.main.resourceURL else {
             throw DriverInstallerError.missingResource("Resources")
         }
-        let foo2qpdl = ToolLocator.bundledFoo2qpdl
-        for name in ["install-driver.sh", "pdftoqpdl", "Samsung-CLP-300-PrinterManager.ppd", "foo2qpdl-COPYING.txt"] {
+        for name in ["install-driver.sh", "pminbox", "Samsung-CLP-300-PrinterManager.ppd"] {
             guard FileManager.default.fileExists(atPath: resources.appendingPathComponent(name).path) else {
                 throw DriverInstallerError.missingResource(name)
             }
         }
-        guard FileManager.default.isExecutableFile(atPath: foo2qpdl.path) else {
-            throw DriverInstallerError.missingResource("foo2qpdl")
+        // Gelen işleri alacak yardımcı yoksa kuyruk işleri sonsuza dek bekletir
+        guard FileManager.default.isExecutableFile(atPath: CupsJobs.helper.path) else {
+            throw DriverInstallerError.missingResource("cups-jobs")
         }
         
         return try runPrivileged([
             "/bin/sh", resources.appendingPathComponent("install-driver.sh").path,
-            "install", resources.path, foo2qpdl.path, queue, deviceURI, description,
+            "install", resources.path, queue, deviceURI, description,
         ])
     }
     
