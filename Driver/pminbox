@@ -1,15 +1,30 @@
 #!/bin/sh
 # CUPS filtresi: bu kuyruğa gelen belgeleri basmaz, PrinterManager'a yönlendirir.
 #
-# Kuyruk işleri varsayılan olarak bekletir (job-hold-until-default=indefinite).
-# PrinterManager bekleyen işi alır, kendi penceresinde açar ve sayfa arası
-# bekleme (belt temizliği) ve elle çift yönle basar; yazıcıya ham veri
-# gönderdiği için bu filtre o işlerde hiç çalışmaz.
+# Safari gibi bir uygulamadan bu yazıcıya "Yazdır" denince iş başlar ve bu
+# filtre bekler; yazıcıya hiç veri göndermez. PrinterManager çalışıyorsa
+# birkaç saniye içinde işin belgesini alır, işi iptal eder (filtre SIGTERM
+# ile biter) ve belgeyi kendi penceresinde açar. Baskıyı oradan sayfa arası
+# bekleme (belt temizliği) ve elle çift yönle, ham QPDL olarak yapar.
 #
-# Bu filtre yalnızca bekletilen bir iş Yazdırma Sırası penceresinden elle
-# serbest bırakılırsa çalışır. macOS yazdırma sistemi filtreleri kısıtlı bir
-# ortamda çalıştırdığı için Ghostscript'e buradan ulaşılamıyor; bu yüzden
-# baskı burada yapılmaz.
+# PrinterManager açık değilse filtre bir süre sonra hata verir; iş
+# "durduruldu" olarak belgesiyle kuyrukta kalır ve uygulama açılınca alınır.
+#
+# Baskı burada yapılmaz: macOS yazdırma sistemi filtreleri kısıtlı bir
+# ortamda çalıştırdığı için Ghostscript'e buradan ulaşılamıyor.
 
-echo "ERROR: Bu yazıcıya gelen belgeler PrinterManager'da açılır. PrinterManager'ı açın ve belgeyi yeniden yazdırın." >&2
+WAIT_SECONDS=30
+
+trap 'exit 0' TERM
+
+echo "INFO: PrinterManager'da açılıyor..." >&2
+
+# sleep'i kısa adımlarla çalıştır: iptal (SIGTERM) en geç 1 sn içinde işlensin
+elapsed=0
+while [ "$elapsed" -lt "$WAIT_SECONDS" ]; do
+    sleep 1
+    elapsed=$((elapsed + 1))
+done
+
+echo "ERROR: PrinterManager açık değil. PrinterManager'ı açın; belge kendiliğinden gelir." >&2
 exit 1

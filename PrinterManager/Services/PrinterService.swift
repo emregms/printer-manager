@@ -57,11 +57,14 @@ class PrinterService {
         let attributes = queueAttributes(queue)
         guard !attributes.isEmpty else { return nil }
         
-        // Bekletilen (held) işler basılmayı beklemiyor: PrinterManager kuyruğunda
-        // bunlar başka uygulamalardan gelen, uygulamada açılacak belgeler
+        // Bekletilen (held) ve durdurulan (stopped) işler sırayı tutmaz: CUPS
+        // onları atlar. PrinterManager kuyruğunda bunlar başka uygulamalardan
+        // gelen, uygulamada açılacak belgeler
         let pendingJobs: [String]
         if let jobs = CupsJobs.activeJobs(queue: queue) {
-            pendingJobs = jobs.filter { $0.state != "held" }.map { "\(queue)-\($0.id)" }
+            pendingJobs = jobs
+                .filter { $0.state != "held" && $0.state != "stopped" }
+                .map { "\(queue)-\($0.id)" }
         } else {
             // lpstat -o satırları: "<kuyruk>-<iş no> <kullanıcı> <boyut> <tarih>"
             pendingJobs = run("/usr/bin/lpstat", ["-o", queue])?

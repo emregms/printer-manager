@@ -6,8 +6,11 @@ import ServiceManagement
 ///
 /// CLP-300'ün transfer kayışı temizleyicisi sayfalar arasında beklemeden
 /// düzgün basamıyor; bu yüzden Safari gibi uygulamalardan doğrudan basılmaz:
-/// - "Samsung CLP-300 (PrinterManager)" kuyruğu gelen işleri bekletir; burası
-///   bekleyen işi alır, siler ve belgeyi pencerede açar.
+/// - "Samsung CLP-300 (PrinterManager)" kuyruğuna gelen işte `pminbox` filtresi
+///   yazıcıya veri göndermeden bekler; burası işin belgesini alır, işi iptal
+///   eder ve belgeyi pencerede açar. (Kuyruğun bekletme ayarı tek başına
+///   yetmiyor: macOS'un yazdırma penceresi işi kendisi serbest bırakıyor.)
+///   Uygulama kapalıysa iş "durduruldu" olarak kalır ve açılınca alınır.
 /// - Yazdırma penceresindeki PDF menüsü ("PrinterManager ile Yazdır") ve
 ///   Finder'daki "Birlikte Aç" da belgeyi buraya getirir.
 /// Kullanıcı ayarları kontrol edip "Yazdır" der; baskı beklemeli ve
@@ -19,7 +22,8 @@ final class PrintInbox: ObservableObject {
     /// Pencerenin henüz açmadığı belge
     @Published private(set) var pending: IncomingDocument?
     
-    /// Yazdırma sürerken yeni iş alınmaz (iş kuyrukta bekler); günlük de buraya yazılır
+    /// Günlük buraya yazılır. Yazdırma sürerken gelen iş yine hemen alınır
+    /// (pminbox USB'yi meşgul etmesin); pencere belgeyi baskı bitince açar.
     weak var printManager: PrintManager?
     
     private var queues: [String] = []
@@ -37,7 +41,8 @@ final class PrintInbox: ObservableObject {
         guard timer == nil else { return }
         Self.removeOldInboxFiles()
         refreshQueues()
-        timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+        // pminbox bu sırada USB'yi meşgul ediyor; çabuk alınsın
+        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.checkQueues() }
         }
     }
@@ -80,15 +85,14 @@ final class PrintInbox: ObservableObject {
     }
     
     private func checkQueues() {
-        guard !isChecking, !queues.isEmpty, pending == nil,
-              printManager?.isPrinting != true else { return }
+        guard !isChecking, !queues.isEmpty, pending == nil else { return }
         
         isChecking = true
         let queues = self.queues
         let skipped = self.skippedJobs
         
         Task {
-            let result = await Task.detached { Self.takeHeldJob(queues: queues, skipping: skipped) }.value
+            let result = await Task.detached { Self.takeIncomingJob(queues: queues, skipping: skipped) }.value
             switch result {
             case .document(let document):
                 printManager?.addLog("📥 \(document.source) kuyruğuna gelen belge alındı: \(document.title)")
@@ -109,13 +113,17 @@ final class PrintInbox: ObservableObject {
         case none
     }
     
-    /// Kullanıcının bekletilen ilk işini alır: belgeyi indirir, işi siler
-    nonisolated private static func takeHeldJob(queues: [String], skipping: Set<Int>) -> TakeResult {
+    /// Başka uygulamadan gelen iş durumları: pminbox bekliyor (processing),
+    /// uygulama kapalıyken zaman aşımı (stopped) ya da `lp` ile bekletilmiş (held)
+    nonisolated private static let incomingStates: Set<String> = ["processing", "stopped", "held"]
+    
+    /// Kullanıcının gelen ilk işini alır: belgeyi indirir, işi iptal eder
+    nonisolated private static func takeIncomingJob(queues: [String], skipping: Set<Int>) -> TakeResult {
         let user = NSUserName()
         for queue in queues {
             guard let jobs = CupsJobs.activeJobs(queue: queue) else { continue }
-            for job in jobs where job.state == "held" && job.user == user && !skipping.contains(job.id) {
-                // PrinterManager'ın kendi ham işleri bekletilmez ama yine de dokunma
+            for job in jobs where incomingStates.contains(job.state) && job.user == user && !skipping.contains(job.id) {
+                // PrinterManager'ın kendi ham işleri (sayfalar) yazıcıya gidiyor; dokunma
                 if job.format == "application/vnd.cups-raw" { continue }
                 
                 let file = inboxFile(title: job.title)

@@ -90,12 +90,9 @@ Yazıcı bu Mac'te Samsung'un eski sürücüsüyle zaten ekliyse ona dokunulmaz;
 
 Transfer kayışı temizleyicisi bozuk olduğu için bu yazıcı her baskıda sayfa arası bekleme ister. Bu yüzden Safari, Önizleme gibi uygulamalardan doğrudan basılmaz; belge PrinterManager'da açılır, oradan beklemeli (ve istenirse elle çift yönlü) basılır:
 
-- **Yazıcıyı seçerek:** Yazdırma penceresinde "Samsung CLP-300" (PrinterManager sürücüsüyle eklenen) yazıcısını seçip **Yazdır** deyin. İş kuyrukta bekletilir; PrinterManager birkaç saniye içinde belgeyi alır, işi siler ve pencerede açar. Uygulama kapalıysa iş "Beklemede" görünür; PrinterManager'ı açınca gelir.
+- **Yazıcıyı seçerek:** Yazdırma penceresinde "Samsung CLP-300" (PrinterManager sürücüsüyle eklenen) yazıcısını seçip **Yazdır** deyin. Yazdırma Sırası'nda kısa bir süre "PrinterManager'da açılıyor…" görünür; PrinterManager birkaç saniye içinde belgeyi alır, işi siler ve pencerede açar. Yazıcıya hiç veri gitmez. Uygulama kapalıysa iş 30 saniye sonra "PrinterManager açık değil" mesajıyla durur; PrinterManager'ı açınca belge gelir.
 - **PDF menüsünden:** Herhangi bir yazdırma penceresinde sol alttaki **PDF ▾ → PrinterManager ile Yazdır**. Hangi yazıcı seçili olursa olsun belge PrinterManager'da açılır.
 - **Finder'dan:** PDF'e sağ tıklayın → **Birlikte Aç → PrinterManager**.
-
-Bekletilen bir işi Yazdırma Sırası penceresinden elle "Sürdür"ürseniz iş basılmaz ve "Bu yazıcıya gelen belgeler PrinterManager'da açılır" hatasıyla iptal olur.
-
 ### Neden?
 
 Samsung'un CLP-300 için son Mac sürücüsü 2008'den kalma ve Apple Silicon'da Rosetta ile çalışıyor. Bu sürücünün `rastertosec` filtresi yoğun ya da renkli sayfalarda çöküyor (`JBIGClipColorFullPage`, SIGSEGV). Kuyrukta "Filter failed" hatası görünüyor. Yazıcı ise yarım kalmış veriyi aldığında `SPL-C ERROR - Including Corrupted Data` sayfası basıyor.
@@ -129,7 +126,7 @@ Gelişmiş ayarlar (⌘, ya da Sürücü başlığının yanındaki düğme): Gh
 | "Sayfa N çok büyük" | Sayfa verisi 8 MB'ı aşmış (olağan: 1–4 MB). "600 dpi ile Gönder" veriyi yaklaşık yarıya indirir. |
 | Yazıcı `SPL-C ERROR` sayfası basıyor | Sürücü modunun "Kendi sürücü" olduğundan emin olun; "Sistem sürücüsü" bu hatayı verir. Devam ederse kaliteyi 600 dpi yapın. |
 | Safari'den yazdırınca belge PrinterManager'da açılmıyor | PrinterManager açık mı? Yazdırma penceresinde PrinterManager sürücüsüyle eklenen yazıcı mı seçili? Ayarlar → macOS Sürücüsü'nde "Kurulu" yazmalı; eski sürümle kurduysanız **Sürücüyü Güncelle** deyin. |
-| "Bu yazıcıya gelen belgeler PrinterManager'da açılır" hatası | Bekleyen iş elle serbest bırakılmış. Belgeyi yeniden yazdırın; PrinterManager açıkken kendiliğinden gelir. |
+| Yazdırma Sırası'nda "PrinterManager açık değil" | PrinterManager'ı açın; durdurulan iş birkaç saniye içinde alınır ve belge açılır. |
 | Ayrıntı gerekiyor | Yazdırma Günlüğü her sayfanın boyutunu, süresini ve Ghostscript uyarılarını gösterir. |
 
 "Sistem sürücüsü" modu eski yol olarak ayarlarda duruyor (PDFKit ile bölüp `lp` ile gönderir); yalnızca yedek olarak kullanın.

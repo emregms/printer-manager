@@ -3,11 +3,12 @@
 *% Samsung CLP-300 - PrinterManager
 *% https://github.com/emregms/printer-manager
 *%
-*% Jobs sent to this queue are held (job-hold-until-default=indefinite) and
-*% opened in PrinterManager, which prints them with a delay between pages
-*% (the CLP-300's transfer belt cleaner needs it) and manual duplex, sending
-*% ready QPDL data raw. The filter below only runs if a held job is released
-*% by hand; it tells the user to use PrinterManager instead.
+*% Jobs sent to this queue are not printed: the pminbox filter waits without
+*% sending data while PrinterManager takes the job's document, cancels the
+*% job and opens it. PrinterManager prints with a delay between pages (the
+*% CLP-300's transfer belt cleaner needs it) and manual duplex, sending ready
+*% QPDL data raw. If the app is not running, the job stops after 30 s and is
+*% picked up when the app starts.
 *%
 *FormatVersion: "4.3"
 *FileVersion: "2.0"

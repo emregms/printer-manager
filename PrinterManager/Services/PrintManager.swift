@@ -85,6 +85,14 @@ class PrintManager: ObservableObject {
             case .system:
                 addLog("Sürücü: sistem sürücüsü (lp)")
                 
+                // PrinterManager kuyruğu PDF'leri basmaz, uygulamaya geri getirir
+                let queue = PrinterService.shared.cupsQueueName(for: printer)
+                if PrinterService.shared.queueStatus(queue)?.makeAndModel.contains("PrinterManager") == true {
+                    addLog("❌ Sistem sürücüsü bu yazıcıyla kullanılamaz; \"Kendi sürücü\" modunu seçin.")
+                    await cleanup()
+                    return
+                }
+                
                 // PDF'i böl
                 addLog("PDF sayfalara bölünüyor...")
                 var pageURLs = try await PDFProcessor.shared.splitPDF(at: pdf)
