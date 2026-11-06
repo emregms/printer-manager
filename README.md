@@ -65,20 +65,36 @@ xattr -cr /Applications/PrinterManager.app
 - Intel veya Apple Silicon (M1/M2/M3)
 - Kendi sürücü için: [Ghostscript](https://www.ghostscript.com) (Homebrew ile)
 
-## Kurulum: Kendi Sürücü
+## Yeni Bir Mac'e Kurulum (sıfırdan)
 
-Samsung CLP-300 için önerilen yol budur. Bir kez yapılır.
+Samsung'un eski sürücüsü **gerekmez**. Bir kez yapılır:
 
-1. Homebrew yoksa [brew.sh](https://brew.sh) adresindeki komutla kurun.
-2. Ghostscript'i kurun:
+1. **Ghostscript:** Homebrew yoksa [brew.sh](https://brew.sh) adresindeki komutla kurun, sonra:
 
    ```bash
    brew install ghostscript
    ```
 
-3. Uygulamayı açın. Sol paneldeki **Sürücü** bölümünde "Ghostscript" ve "foo2qpdl" yeşil tikli görünmelidir.
+   Homebrew kuruluysa bunu uygulamanın Ayarlar penceresindeki **Ghostscript'i Kur** düğmesi de yapar.
+2. **Uygulama:** PrinterManager'ı `/Applications` klasörüne koyun ve açın (ilk açılış için yukarıdaki macOS uyarısı adımları).
+3. **Yazıcı:** CLP-300'ü USB ile bağlayıp açın. PrinterManager'da **Ayarlar (⌘,) → macOS Sürücüsü → Sürücüyü Kur ve Yazıcıyı Ekle** deyin ve yönetici şifrenizi macOS'un penceresine girin. Yazıcı, Yazıcılar ve Tarayıcılar'a "Samsung CLP-300" olarak eklenir.
+4. **İsteğe bağlı**, aynı pencerenin "Başka Uygulamalardan Yazdırma" bölümünden:
+   - Yazdırma penceresinin PDF menüsüne "PrinterManager ile Yazdır"ı ekleyin.
+   - "Oturum açılınca başlat"ı açın; başka uygulamalardan gönderilen belgeler hemen gelir.
 
-foo2qpdl ayrıca kurulmaz; uygulamanın içinde gelir. Yazıcının macOS'ta eklenmiş olması (Sistem Ayarları > Yazıcılar ve Tarayıcılar) yeterlidir. Mevcut kuyruk değiştirilmez, sayfalar ona `lp -o raw` ile filtresiz gönderilir.
+Sol paneldeki **Sürücü** bölümünde "Ghostscript" ve "foo2qpdl" yeşil tikli görünmelidir. foo2qpdl ayrıca kurulmaz; uygulamanın içinde gelir.
+
+Yazıcı bu Mac'te Samsung'un eski sürücüsüyle zaten ekliyse ona dokunulmaz; yanına "Samsung CLP-300 (PrinterManager)" adlı ikinci bir yazıcı eklenir. Uygulama sayfaları iki yazıcıya da `lp -o raw` ile, filtresiz gönderir.
+
+## Başka Uygulamalardan Yazdırma
+
+Transfer kayışı temizleyicisi bozuk olduğu için bu yazıcı her baskıda sayfa arası bekleme ister. Bu yüzden Safari, Önizleme gibi uygulamalardan doğrudan basılmaz; belge PrinterManager'da açılır, oradan beklemeli (ve istenirse elle çift yönlü) basılır:
+
+- **Yazıcıyı seçerek:** Yazdırma penceresinde "Samsung CLP-300" (PrinterManager sürücüsüyle eklenen) yazıcısını seçip **Yazdır** deyin. İş kuyrukta bekletilir; PrinterManager birkaç saniye içinde belgeyi alır, işi siler ve pencerede açar. Uygulama kapalıysa iş "Beklemede" görünür; PrinterManager'ı açınca gelir.
+- **PDF menüsünden:** Herhangi bir yazdırma penceresinde sol alttaki **PDF ▾ → PrinterManager ile Yazdır**. Hangi yazıcı seçili olursa olsun belge PrinterManager'da açılır.
+- **Finder'dan:** PDF'e sağ tıklayın → **Birlikte Aç → PrinterManager**.
+
+Bekletilen bir işi Yazdırma Sırası penceresinden elle "Sürdür"ürseniz iş basılmaz ve "Bu yazıcıya gelen belgeler PrinterManager'da açılır" hatasıyla iptal olur.
 
 ### Neden?
 
@@ -112,6 +128,8 @@ Gelişmiş ayarlar (⌘, ya da Sürücü başlığının yanındaki düğme): Gh
 | "Yazıcı kapalı görünüyor" | Yazıcıyı açın, USB kablosunu kontrol edin. Yazdırma sırasında yazıcı hazır olana kadar uygulama bekler. |
 | "Sayfa N çok büyük" | Sayfa verisi 8 MB'ı aşmış (olağan: 1–4 MB). "600 dpi ile Gönder" veriyi yaklaşık yarıya indirir. |
 | Yazıcı `SPL-C ERROR` sayfası basıyor | Sürücü modunun "Kendi sürücü" olduğundan emin olun; "Sistem sürücüsü" bu hatayı verir. Devam ederse kaliteyi 600 dpi yapın. |
+| Safari'den yazdırınca belge PrinterManager'da açılmıyor | PrinterManager açık mı? Yazdırma penceresinde PrinterManager sürücüsüyle eklenen yazıcı mı seçili? Ayarlar → macOS Sürücüsü'nde "Kurulu" yazmalı; eski sürümle kurduysanız **Sürücüyü Güncelle** deyin. |
+| "Bu yazıcıya gelen belgeler PrinterManager'da açılır" hatası | Bekleyen iş elle serbest bırakılmış. Belgeyi yeniden yazdırın; PrinterManager açıkken kendiliğinden gelir. |
 | Ayrıntı gerekiyor | Yazdırma Günlüğü her sayfanın boyutunu, süresini ve Ghostscript uyarılarını gösterir. |
 
 "Sistem sürücüsü" modu eski yol olarak ayarlarda duruyor (PDFKit ile bölüp `lp` ile gönderir); yalnızca yedek olarak kullanın.
@@ -125,7 +143,12 @@ open PrinterManager.xcodeproj
 # Xcode'da ⌘+R ile çalıştırın
 ```
 
-foo2qpdl, derleme sırasında `ThirdParty/foo2qpdl` klasöründeki kaynaktan otomatik derlenip uygulama paketine (`Contents/Helpers/foo2qpdl`) konur.
+Derleme sırasında iki yardımcı program otomatik derlenip uygulama paketine (`Contents/Helpers/`) konur:
+
+- `foo2qpdl`: `ThirdParty/foo2qpdl` klasöründeki kaynaktan.
+- `cups-jobs`: `Driver/cups-jobs.c`'den. Bekletilen işleri listeler, belgelerini alır ve işi siler.
+
+Yazıcı kuyruğunun dosyaları (`pminbox` filtresi, PPD, `install-driver.sh`) `Driver/` klasöründedir.
 
 ## Lisans
 

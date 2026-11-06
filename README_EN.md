@@ -65,20 +65,36 @@ xattr -cr /Applications/PrinterManager.app
 - Intel or Apple Silicon (M1/M2/M3)
 - For the own driver: [Ghostscript](https://www.ghostscript.com) (via Homebrew)
 
-## Setup: Own Driver
+## Setting Up a New Mac (from scratch)
 
-This is the recommended path for the Samsung CLP-300. You only do it once.
+Samsung's old driver is **not needed**. You only do this once:
 
-1. If you don't have Homebrew, install it with the command on [brew.sh](https://brew.sh).
-2. Install Ghostscript:
+1. **Ghostscript:** if you don't have Homebrew, install it with the command on [brew.sh](https://brew.sh), then:
 
    ```bash
    brew install ghostscript
    ```
 
-3. Open the app. In the **Sürücü** (Driver) section of the side panel, "Ghostscript" and "foo2qpdl" should both show a green check.
+   If Homebrew is installed, the **Ghostscript'i Kur** (Install Ghostscript) button in the app's Settings window does this too.
+2. **App:** put PrinterManager in `/Applications` and open it (see the first-launch macOS warning steps above).
+3. **Printer:** connect the CLP-300 over USB and turn it on. In PrinterManager choose **Settings (⌘,) → macOS Sürücüsü → Sürücüyü Kur ve Yazıcıyı Ekle** (Install driver and add printer) and enter your admin password in the macOS prompt. The printer is added to Printers & Scanners as "Samsung CLP-300".
+4. **Optional**, in the "Başka Uygulamalardan Yazdırma" (Printing from other apps) section of the same window:
+   - Add "PrinterManager ile Yazdır" to the PDF menu of print dialogs.
+   - Turn on launch at login, so documents sent from other apps arrive right away.
 
-foo2qpdl needs no separate install; it ships inside the app. The printer only has to be added in macOS (System Settings > Printers & Scanners). The existing queue is not modified; pages are sent to it unfiltered with `lp -o raw`.
+In the **Sürücü** (Driver) section of the side panel, "Ghostscript" and "foo2qpdl" should both show a green check. foo2qpdl needs no separate install; it ships inside the app.
+
+If the printer is already set up on this Mac with Samsung's old driver, that queue is left alone and a second printer named "Samsung CLP-300 (PrinterManager)" is added next to it. The app sends pages to either one unfiltered with `lp -o raw`.
+
+## Printing from Other Apps
+
+The transfer belt cleaner is broken, so this printer needs a delay between pages on every job. That's why apps like Safari or Preview don't print to it directly; the document opens in PrinterManager instead, which prints it with the delay (and manual duplex if you want):
+
+- **By choosing the printer:** in the print dialog pick "Samsung CLP-300" (the one added by the PrinterManager driver) and click **Print**. The job is held in the queue; within a few seconds PrinterManager takes the document, deletes the job and opens it in its window. If the app is closed, the job shows as "On Hold" and arrives when you open PrinterManager.
+- **From the PDF menu:** in any print dialog, **PDF ▾ → PrinterManager ile Yazdır** at the bottom left. Whatever printer is selected, the document opens in PrinterManager.
+- **From Finder:** right-click a PDF → **Open With → PrinterManager**.
+
+If you release a held job by hand from the print queue window, it is not printed; it is cancelled with the error "Bu yazıcıya gelen belgeler PrinterManager'da açılır" (documents sent to this printer open in PrinterManager).
 
 ### Why?
 
@@ -114,6 +130,8 @@ The app's messages are in Turkish; the English meaning is given here.
 | "Yazıcı kapalı görünüyor" (printer offline) | Turn the printer on and check the USB cable. While printing, the app waits until the printer is ready. |
 | "Sayfa N çok büyük" (page N too large) | The page data is over 8 MB (normal: 1–4 MB). "600 dpi ile Gönder" roughly halves it. |
 | Printer prints an `SPL-C ERROR` page | Make sure the driver mode is "Kendi sürücü"; "Sistem sürücüsü" (system driver) causes this error. If it persists, set quality to 600 dpi. |
+| Printing from Safari doesn't open the document in PrinterManager | Is PrinterManager running? Is the printer added by the PrinterManager driver selected in the print dialog? Settings → macOS Sürücüsü should say "Kurulu" (installed); if you installed with an older version, click **Sürücüyü Güncelle** (Update driver). |
+| Error "Bu yazıcıya gelen belgeler PrinterManager'da açılır" | A held job was released by hand. Print the document again; with PrinterManager running it arrives automatically. |
 | Need details | The print log shows each page's size, time and any Ghostscript warnings. |
 
 The "Sistem sürücüsü" (system driver) mode remains in settings as the old path (splits with PDFKit, sends with `lp`); use it only as a fallback.
@@ -127,7 +145,12 @@ open PrinterManager.xcodeproj
 # Press ⌘+R to run
 ```
 
-During the build, foo2qpdl is compiled from the source in `ThirdParty/foo2qpdl` and placed in the app bundle (`Contents/Helpers/foo2qpdl`).
+During the build, two helper programs are compiled and placed in the app bundle (`Contents/Helpers/`):
+
+- `foo2qpdl`: from the source in `ThirdParty/foo2qpdl`.
+- `cups-jobs`: from `Driver/cups-jobs.c`. It lists held jobs, fetches their documents and deletes the job.
+
+The printer queue's files (`pminbox` filter, PPD, `install-driver.sh`) are in `Driver/`.
 
 ## License
 
