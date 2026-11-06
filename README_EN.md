@@ -35,6 +35,7 @@ xattr -cr /Applications/PrinterManager.app
 
 ## Features
 
+- **Own Driver (Samsung CLP-300)**: Instead of the old Samsung driver in macOS, the app prepares each page itself (Ghostscript + foo2qpdl) and sends it to the printer raw. Dense, colour and vector-heavy pages print reliably
 - **Adjustable Delays**: Print and cleaning delays with sliders
 - **Page-by-Page Printing**: Each page sent separately to printer
 - **Manual Duplex**: Odd pages → Flip → Even pages reversed
@@ -62,13 +63,60 @@ xattr -cr /Applications/PrinterManager.app
 
 - macOS 13.0 (Ventura) or later
 - Intel or Apple Silicon (M1/M2/M3)
+- For the own driver: [Ghostscript](https://www.ghostscript.com) (via Homebrew)
+
+## Setup: Own Driver
+
+This is the recommended path for the Samsung CLP-300. You only do it once.
+
+1. If you don't have Homebrew, install it with the command on [brew.sh](https://brew.sh).
+2. Install Ghostscript:
+
+   ```bash
+   brew install ghostscript
+   ```
+
+3. Open the app. In the **Sürücü** (Driver) section of the side panel, "Ghostscript" and "foo2qpdl" should both show a green check.
+
+foo2qpdl needs no separate install; it ships inside the app. The printer only has to be added in macOS (System Settings > Printers & Scanners). The existing queue is not modified; pages are sent to it unfiltered with `lp -o raw`.
+
+### Why?
+
+Samsung's last Mac driver for the CLP-300 dates from 2008 and runs under Rosetta on Apple Silicon. Its `rastertosec` filter crashes on dense or colour pages (`JBIGClipColorFullPage`, SIGSEGV). The queue shows "Filter failed", and when the printer receives the truncated data it prints a `SPL-C ERROR - Including Corrupted Data` page.
+
+The own driver bypasses that filter completely:
+
+```
+PDF page → Ghostscript (bitcmyk / pbmraw) → foo2qpdl -z0 -p2 → lp -o raw → printer
+```
+
+The parameters are taken verbatim from the `foo2qpdl-wrapper` script of the foo2zjs project, which Linux has used for the CLP-300 for years (A4, 1200x600 dpi). Each page is rendered from the PDF itself; landscape and Letter pages are fitted to A4.
 
 ## Usage
 
 1. **Select Printer** → Choose from dropdown
 2. **Set Delays** → Print (30s) + Cleaning (8s)
-3. **Select PDF** → Load your file
-4. **Print** → Monitor progress
+3. **Driver and Quality** → "Kendi sürücü (önerilen)" (own driver), quality 1200x600 dpi (600 dpi is faster with less data, 1200x1200 is best)
+4. **Select PDF** → Load your file
+5. **Print** → Monitor progress
+
+Advanced settings (⌘, or the button next to the Driver heading): Ghostscript and foo2qpdl paths, raw queue name. Left empty, they are found automatically.
+
+## Troubleshooting
+
+The app's messages are in Turkish; the English meaning is given here.
+
+| Message | What to do |
+|---|---|
+| "Ghostscript bulunamadı" (not found) | `brew install ghostscript`. If it lives elsewhere, enter its path in Settings (⌘,). |
+| "Yazıcı kuyruğu durdurulmuş" (queue stopped) | System Settings > Printers & Scanners > Print Queue > Resume, or `cupsenable Samsung_CLP_300 && cupsaccept Samsung_CLP_300` |
+| "Kuyrukta bekleyen iş var" (pending jobs) | Delete old stuck jobs in the Print Queue window (`cancel -a Samsung_CLP_300`). |
+| "Yazıcı kapalı görünüyor" (printer offline) | Turn the printer on and check the USB cable. While printing, the app waits until the printer is ready. |
+| "Sayfa N çok büyük" (page N too large) | The page data is over 8 MB (normal: 1–4 MB). "600 dpi ile Gönder" roughly halves it. |
+| Printer prints an `SPL-C ERROR` page | Make sure the driver mode is "Kendi sürücü"; "Sistem sürücüsü" (system driver) causes this error. If it persists, set quality to 600 dpi. |
+| Need details | The print log shows each page's size, time and any Ghostscript warnings. |
+
+The "Sistem sürücüsü" (system driver) mode remains in settings as the old path (splits with PDFKit, sends with `lp`); use it only as a fallback.
 
 ## Build from Source
 
@@ -79,6 +127,10 @@ open PrinterManager.xcodeproj
 # Press ⌘+R to run
 ```
 
+During the build, foo2qpdl is compiled from the source in `ThirdParty/foo2qpdl` and placed in the app bundle (`Contents/Helpers/foo2qpdl`).
+
 ## License
 
 [MIT](LICENSE) - Hüseyin Emre Gümüş (info@hegg.tr)
+
+The bundled **foo2qpdl** is not covered by that license: it comes from the foo2zjs project (Rick Richardson; JBIG code by Markus Kuhn) and is licensed under the **GPL-2.0**. The source is Debian's `foo2zjs_20200505dfsg0` package (the original site is no longer online). The app runs it as a separate program; none of its code is copied into the Swift sources. The unmodified source code, the license text (`COPYING`) and its provenance are in [ThirdParty/foo2qpdl](ThirdParty/foo2qpdl). The license text also ships in the app bundle as `Contents/Resources/foo2qpdl-COPYING.txt`.
