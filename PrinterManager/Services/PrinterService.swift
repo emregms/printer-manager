@@ -15,59 +15,77 @@ class PrinterService {
         return NSPrinter.printerNames
     }
     
-    /// NSPrinter adını CUPS formatına dönüştürür
+    /// NSPrinter adını CUPS kuyruk adına dönüştürür
     /// NSPrinter: "Samsung CLP-300" → CUPS: "Samsung_CLP_300"
-    private func cupsPrinterName(from displayName: String) -> String {
+    func cupsQueueName(for displayName: String) -> String {
         // Boşlukları ve tireleri alt tire yap
-        return displayName
+        let guess = displayName
             .replacingOccurrences(of: " ", with: "_")
             .replacingOccurrences(of: "-", with: "_")
+        
+        let queues = run("/usr/bin/lpstat", ["-e"])?
+            .split(separator: "\n").map(String.init) ?? []
+        if queues.isEmpty || queues.contains(guess) {
+            return guess
+        }
+        
+        // Kuyruk farklı adla eklenmişse açıklamasından (printer-info) bul
+        for queue in queues where queueAttributes(queue)["printer-info"] == displayName {
+            return queue
+        }
+        return guess
+    }
+    
+    /// Kuyruğun durumunu okur. `lpstat` çıktısı sistem diline göre çevrildiği için
+    /// dilden bağımsız `lpoptions` alanları kullanılır.
+    func queueStatus(_ queue: String) -> PrinterQueueStatus? {
+        let attributes = queueAttributes(queue)
+        guard !attributes.isEmpty else { return nil }
+        
+        // lpstat -o satırları: "<kuyruk>-<iş no> <kullanıcı> <boyut> <tarih>"
+        let pendingJobs = run("/usr/bin/lpstat", ["-o", queue])?
+            .split(separator: "\n")
+            .compactMap { $0.split(separator: " ").first.map(String.init) } ?? []
+        
+        return PrinterQueueStatus(
+            queue: queue,
+            isStopped: attributes["printer-state"] == "5",
+            isAcceptingJobs: attributes["printer-is-accepting-jobs"] != "false",
+            stateReasons: attributes["printer-state-reasons"] ?? "none",
+            makeAndModel: attributes["printer-make-and-model"] ?? "",
+            deviceURI: attributes["device-uri"] ?? "",
+            pendingJobs: pendingJobs
+        )
     }
     
     /// Yazıcının bağlı ve erişilebilir olup olmadığını kontrol eder
     /// - Parameter printerName: Kontrol edilecek yazıcı adı (görüntülenen ad)
     /// - Returns: Yazıcı erişilebilirse true, değilse false
     func isPrinterAvailable(_ printerName: String) -> Bool {
-        // CUPS formatına dönüştür
-        let cupsName = cupsPrinterName(from: printerName)
+        let cupsName = cupsQueueName(for: printerName)
         
-        // lpstat -p yazıcı_adı komutu ile yazıcı durumunu kontrol et
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/lpstat")
-        process.arguments = ["-p", cupsName]
-        
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-        
-        do {
-            try process.run()
-            process.waitUntilExit()
-            
-            let status = process.terminationStatus
-            
-            if status != 0 {
-                print("[PRINTER] Yazıcı bulunamadı: \(printerName) (CUPS: \(cupsName))")
-                return false
-            }
-            
-            // Çıktıyı kontrol et - "disabled" veya "not accepting" varsa yazıcı hazır değil
-            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: outputData, encoding: .utf8) ?? ""
-            
-            if output.contains("disabled") || output.contains("not accepting") {
-                print("[PRINTER] Yazıcı devre dışı: \(printerName)")
-                return false
-            }
-            
-            print("[PRINTER] ✓ Yazıcı erişilebilir: \(printerName)")
-            return true
-            
-        } catch {
-            print("[PRINTER] lpstat hatası: \(error)")
+        guard let status = queueStatus(cupsName) else {
+            print("[PRINTER] Yazıcı bulunamadı: \(printerName) (CUPS: \(cupsName))")
             return false
         }
+        
+        if status.isStopped || !status.isAcceptingJobs {
+            print("[PRINTER] Yazıcı devre dışı: \(printerName)")
+            return false
+        }
+        
+        print("[PRINTER] ✓ Yazıcı erişilebilir: \(printerName)")
+        return true
+    }
+    
+    /// Hazır yazıcı verisini (QPDL) filtresiz, ham olarak gönderir.
+    /// `-o raw` sistem sürücüsünün filtre zincirini tamamen atlar.
+    /// - Parameters:
+    ///   - url: Ham dosya (.zc / .zm)
+    ///   - queue: CUPS kuyruk adı
+    ///   - title: Kuyrukta görünecek iş adı
+    func printRaw(at url: URL, queue: String, title: String) async throws {
+        try submit(["-d", queue, "-o", "raw", "-t", title, url.path])
     }
     
     /// Tek sayfalık PDF'i belirtilen yazıcıya yazdırır
@@ -77,7 +95,7 @@ class PrinterService {
     ///   - grayscale: Siyah beyaz modda yazdırma
     func printPage(at url: URL, to printerName: String, grayscale: Bool = false) async throws {
         // CUPS formatına dönüştür
-        let cupsName = cupsPrinterName(from: printerName)
+        let cupsName = cupsQueueName(for: printerName)
         
         // lp komutu ile yazdır
         var arguments = ["-d", cupsName]
@@ -89,6 +107,13 @@ class PrinterService {
         
         arguments.append(url.path)
         
+        try submit(arguments)
+    }
+    
+    // MARK: - Private Methods
+    
+    /// `lp` ile iş gönderir
+    private func submit(_ arguments: [String]) throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/lp")
         process.arguments = arguments
@@ -121,6 +146,95 @@ class PrinterService {
             print("[PRINT] Process hatası: \(error)")
             throw PrinterServiceError.printFailed(error.localizedDescription)
         }
+    }
+    
+    /// `lpoptions -p <kuyruk>` alanları (printer-state=3 printer-info='...' ...)
+    /// Salt okunur: -o verilmeden ayar dosyasına yazmaz.
+    private func queueAttributes(_ queue: String) -> [String: String] {
+        guard let output = run("/usr/bin/lpoptions", ["-p", queue]) else { return [:] }
+        
+        var attributes: [String: String] = [:]
+        var key = ""
+        var value = ""
+        var inValue = false
+        var quote: Character?
+        var escaped = false
+        
+        func flush() {
+            if !key.isEmpty { attributes[key] = value }
+            key = ""
+            value = ""
+            inValue = false
+        }
+        
+        for character in output {
+            if escaped {
+                if inValue { value.append(character) } else { key.append(character) }
+                escaped = false
+            } else if character == "\\" {
+                escaped = true
+            } else if let open = quote {
+                if character == open { quote = nil } else { value.append(character) }
+            } else if character == "'" || character == "\"" {
+                quote = character
+            } else if character == " " || character == "\n" {
+                flush()
+            } else if character == "=" && !inValue {
+                inValue = true
+            } else if inValue {
+                value.append(character)
+            } else {
+                key.append(character)
+            }
+        }
+        flush()
+        
+        return attributes
+    }
+    
+    /// Komutu çalıştırır; başarılıysa stdout'u döndürür
+    private func run(_ path: String, _ arguments: [String]) -> String? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = arguments
+        
+        let outputPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = FileHandle.nullDevice
+        
+        do {
+            try process.run()
+        } catch {
+            print("[PRINTER] \(path) çalıştırılamadı: \(error)")
+            return nil
+        }
+        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        
+        guard process.terminationStatus == 0 else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+}
+
+// MARK: - Queue Status
+struct PrinterQueueStatus {
+    let queue: String
+    let isStopped: Bool
+    let isAcceptingJobs: Bool
+    let stateReasons: String
+    let makeAndModel: String
+    let deviceURI: String
+    /// Kuyrukta bitmemiş işler (ör. "Samsung_CLP_300-114")
+    let pendingJobs: [String]
+    
+    /// USB yazıcı kapalı ya da kablo çıkmışsa CUPS "offline-report" bildirir
+    var isOffline: Bool {
+        stateReasons.contains("offline")
+    }
+    
+    /// Kendi sürücümüzün ürettiği veri yalnızca CLP-300 (QPDL, -z0) içindir
+    var isCLP300: Bool {
+        "\(makeAndModel) \(deviceURI)".range(of: "CLP-?300", options: [.regularExpression, .caseInsensitive]) != nil
     }
 }
 
