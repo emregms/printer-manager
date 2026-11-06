@@ -65,6 +65,24 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity)
             .background(Color(NSColor.controlBackgroundColor))
+            // Ön kontrol / büyük sayfa soruları (kağıt çevirme uyarısından ayrı görünümde)
+            .alert(
+                printManager.prompt?.title ?? "",
+                isPresented: Binding(
+                    get: { printManager.prompt != nil },
+                    // Kapatma yalnızca butonlardan: cevap answerPrompt ile verilir
+                    set: { _ in }
+                ),
+                presenting: printManager.prompt
+            ) { prompt in
+                ForEach(prompt.actions) { action in
+                    Button(action.title, role: action.choice == .cancel ? .cancel : nil) {
+                        printManager.answerPrompt(action.choice)
+                    }
+                }
+            } message: { prompt in
+                Text(prompt.message)
+            }
         }
         .fileImporter(
             isPresented: $showFilePicker,
@@ -116,7 +134,8 @@ struct ContentView: View {
                 printDelay: TimeInterval(settingsStore.printDelaySeconds),
                 cleanDelay: TimeInterval(settingsStore.cleanDelaySeconds),
                 duplex: settingsStore.duplexEnabled,
-                grayscale: settingsStore.grayscaleMode
+                grayscale: settingsStore.grayscaleMode,
+                driver: settingsStore.driverSettings
             )
         }
     }

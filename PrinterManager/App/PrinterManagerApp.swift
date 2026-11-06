@@ -24,5 +24,10 @@ struct PrinterManagerApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
         }
+        
+        Settings {
+            DriverSettingsView()
+                .environmentObject(settingsStore)
+        }
     }
 }
