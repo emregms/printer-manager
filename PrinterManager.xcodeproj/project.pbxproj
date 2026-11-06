@@ -129,6 +129,7 @@
 				401 /* Sources */,
 				200 /* Frameworks */,
 				402 /* Resources */,
+				403 /* Build foo2qpdl */,
 			);
 			buildRules = (
 			);
@@ -183,6 +184,39 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		403 /* Build foo2qpdl */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 0;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/ThirdParty/foo2qpdl/build-helper.sh",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/foo2qpdl.c",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/jbig.c",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/jbig.h",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/jbig_ar.c",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/jbig_ar.h",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/qpdl.h",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/COPYING",
+			);
+			name = "Build foo2qpdl";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/foo2qpdl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/foo2qpdl-COPYING.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/sh \"${SRCROOT}/ThirdParty/foo2qpdl/build-helper.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		401 /* Sources */ = {
