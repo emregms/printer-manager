@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var selectedPDF: URL?
     @State private var showFilePicker = false
     @State private var showFlipPagesAlert = false
+    @State private var isDropTargeted = false
     
     var body: some View {
         HStack(spacing: 0) {
@@ -68,6 +69,11 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity)
             .background(Color(NSColor.controlBackgroundColor))
+            .overlay {
+                if isDropTargeted {
+                    DropHighlight(isPrinting: printManager.isPrinting)
+                }
+            }
             // Ön kontrol / büyük sayfa soruları (kağıt çevirme uyarısından ayrı görünümde)
             .alert(
                 printManager.prompt?.title ?? "",
@@ -87,6 +93,8 @@ struct ContentView: View {
                 Text(prompt.message)
             }
         }
+        // Finder'dan sürüklenen PDF
+        .onDrop(of: [.fileURL], isTargeted: $isDropTargeted, perform: openDropped)
         .fileImporter(
             isPresented: $showFilePicker,
             allowedContentTypes: [.pdf],
@@ -179,6 +187,41 @@ struct ContentView: View {
         }
     }
     
+    /// Bırakılan ilk PDF gelen kutusu yoluyla açılır; yazdırma sürüyorsa bitince açılır
+    private func openDropped(_ providers: [NSItemProvider]) -> Bool {
+        let providers = providers.filter { $0.canLoadObject(ofClass: URL.self) }
+        guard !providers.isEmpty else { return false }
+        
+        let group = DispatchGroup()
+        let lock = NSLock()
+        var urls = [URL?](repeating: nil, count: providers.count)
+        for (index, provider) in providers.enumerated() {
+            group.enter()
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                lock.lock()
+                urls[index] = url
+                lock.unlock()
+                group.leave()
+            }
+        }
+        
+        group.notify(queue: .main) {
+            let pdfs = urls.compactMap { $0 }.filter { $0.pathExtension.lowercased() == "pdf" }
+            guard let pdf = pdfs.first else {
+                printManager.addLog("⚠️ Yalnızca PDF dosyası bırakılabilir")
+                return
+            }
+            if pdfs.count > 1 {
+                printManager.addLog("Birden çok PDF bırakıldı; yalnızca \(pdf.lastPathComponent) açılıyor")
+            }
+            if printManager.isPrinting {
+                printManager.addLog("\(pdf.lastPathComponent) yazdırma bitince açılacak")
+            }
+            PrintInbox.shared.open(urls: [pdf], source: "sürükle-bırak")
+        }
+        return true
+    }
+    
     private func resetAll() {
         selectedPDF?.stopAccessingSecurityScopedResource()
         selectedPDF = nil
@@ -192,6 +235,38 @@ struct ContentView: View {
                 printManager.addLog("Cache temizlendi")
             }
         }
+    }
+}
+
+// MARK: - Drop Highlight
+/// PDF pencerenin üstüne sürüklenirken gösterilir
+struct DropHighlight: View {
+    let isPrinting: Bool
+    
+    var body: some View {
+        RoundedRectangle(cornerRadius: 14)
+            .fill(Color.accentColor.opacity(0.08))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 3, dash: [10, 6]))
+            )
+            .overlay(
+                VStack(spacing: 10) {
+                    Image(systemName: "arrow.down.doc.fill")
+                        .font(.system(size: 44))
+                    Text("PDF'yi bırakın")
+                        .font(.title2.bold())
+                    if isPrinting {
+                        Text("Yazdırma bitince açılır")
+                            .font(.subheadline)
+                    }
+                }
+                .foregroundColor(.accentColor)
+                .padding(24)
+                .background(RoundedRectangle(cornerRadius: 12).fill(.regularMaterial))
+            )
+            .padding(10)
+            .allowsHitTesting(false)
     }
 }
 

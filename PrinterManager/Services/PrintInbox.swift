@@ -64,13 +64,13 @@ final class PrintInbox: ObservableObject {
     }
     
     /// PDF menüsü / Birlikte Aç ile gelen dosyalar
-    func open(urls: [URL]) {
+    func open(urls: [URL], source: String = "Yazdırma penceresi / Finder") {
         for url in urls where url.pathExtension.lowercased() == "pdf" {
             let copy = Self.inboxFile(title: url.deletingPathExtension().lastPathComponent)
             do {
                 try FileManager.default.copyItem(at: url, to: copy)
                 receive(IncomingDocument(url: copy, title: url.deletingPathExtension().lastPathComponent,
-                                         source: "Yazdırma penceresi / Finder"))
+                                         source: source))
             } catch {
                 printManager?.addLog("⚠️ Gelen PDF kopyalanamadı: \(error.localizedDescription)")
             }

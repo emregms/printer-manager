@@ -121,13 +121,13 @@ struct PDFPreviewView: View {
     
     private var emptyStateView: some View {
         VStack(spacing: 16) {
-            Image(systemName: "doc.text.magnifyingglass")
+            Image(systemName: "arrow.down.doc")
                 .font(.system(size: 60))
                 .foregroundColor(.secondary.opacity(0.5))
             Text("PDF dosyası seçilmedi")
                 .font(.title3)
                 .foregroundColor(.secondary)
-            Text("Sol panelden bir PDF dosyası seçin")
+            Text("PDF dosyasını buraya sürükleyin ya da sol panelden seçin")
                 .font(.subheadline)
                 .foregroundColor(.secondary.opacity(0.7))
         }
