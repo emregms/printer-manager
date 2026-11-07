@@ -17,13 +17,13 @@ The app's interface is in Turkish; the English names are given in parentheses be
 
 ## 📥 Download
 
-**[⬇️ PrinterManager v2.0.0 (DMG, 3.6 MB)](https://github.com/emregms/printer-manager/releases/download/v2.0.0/PrinterManager-v2.0.0.dmg)** · [All releases](https://github.com/emregms/printer-manager/releases)
+**[⬇️ PrinterManager v2.0.0 (DMG, 29 MB)](https://github.com/emregms/printer-manager/releases/download/v2.0.0/PrinterManager-v2.0.0.dmg)** · [All releases](https://github.com/emregms/printer-manager/releases)
 
 Runs on Intel and Apple Silicon Macs (macOS 13 Ventura or later).
 
 ## 🚀 Setting Up a New Mac
 
-Samsung's old driver is **not needed**. It takes 5–10 minutes, once.
+Samsung's old driver and Homebrew are **not needed**. It takes a few minutes, once.
 
 1. **Open the DMG** and drag PrinterManager to the **Applications** folder next to it.
 2. **Allow the first launch.** The app is not signed by Apple, so macOS blocks it the first time. Run once in Terminal:
@@ -34,7 +34,7 @@ Samsung's old driver is **not needed**. It takes 5–10 minutes, once.
 
    Without Terminal: try to open the app, close the warning, then click **Open Anyway** at the bottom of **System Settings → Privacy & Security** and enter your Mac password.
 3. **Connect the CLP-300 over USB and turn it on**, then open PrinterManager. The **Setup Assistant** (Kurulum Yardımcısı) opens by itself:
-   - **1. Ghostscript:** One button. With Homebrew, Ghostscript is installed directly. Without Homebrew, Terminal opens and installs Homebrew, then Ghostscript; it asks for your Mac password and Enter once.
+   - **1. Yazdırma Araçları (printing tools):** Ghostscript and foo2qpdl come inside the app; this step has a green tick from the start.
    - **2. Printer and Driver:** **Sürücüyü Kur ve Yazıcıyı Ekle** (install driver and add printer) → your Mac password. The printer appears in Printers & Scanners as "Samsung CLP-300".
    - **3. Optional:** add "PrinterManager ile Yazdır" to the PDF menu of the print dialog; turn on "open at login".
    - **4. Photo Mode:** can be turned on if Samsung's colour files are found ([details](#photo-mode)).
@@ -48,17 +48,7 @@ Samsung's old driver is **not needed**. It takes 5–10 minutes, once.
 
 Open the Setup Assistant again later from **PrinterManager menu → Kurulum Yardımcısı…**. If the printer is already added on this Mac with Samsung's old driver, that queue is left alone; a second printer "Samsung CLP-300 (PrinterManager)" is added next to it.
 
-<details>
-<summary>Manual setup (Terminal)</summary>
-
-```bash
-# Without Homebrew: https://brew.sh
-brew install ghostscript
-```
-
-Then in PrinterManager: **Settings (⌘,) → macOS Sürücüsü (macOS driver) → Sürücüyü Kur ve Yazıcıyı Ekle**.
-
-</details>
+The driver can also be installed from Settings: **Settings (⌘,) → macOS Sürücüsü (macOS driver) → Sürücüyü Kur ve Yazıcıyı Ekle**.
 
 ## ✨ Features
 
@@ -104,7 +94,7 @@ Then in PrinterManager: **Settings (⌘,) → macOS Sürücüsü (macOS driver) 
 5. **PDF** → drag it onto the window or pick it in the left panel.
 6. **Print** (Yazdır) → follow it in "Baskı Sırası" (print queue).
 
-Advanced settings (⌘, or the button next to the Driver heading): Ghostscript and foo2qpdl paths, raw queue name, the printer's power save. Paths left empty are found automatically.
+Advanced settings (⌘, or the button next to the Driver heading): Ghostscript and foo2qpdl paths, raw queue name, the printer's power save. With empty paths the app uses the tools inside it; to use your own Ghostscript, enter its path here.
 
 ## Printing from Other Apps
 
@@ -185,7 +175,7 @@ The app's messages are in Turkish; the English meaning is given here.
 | Message | What to do |
 |---|---|
 | "PrinterManager can't be opened / is damaged" | The first launch wasn't allowed: `xattr -cr /Applications/PrinterManager.app`, or System Settings → Privacy & Security → **Open Anyway**. |
-| "Ghostscript bulunamadı" (not found) | The button in the Setup Assistant, or `brew install ghostscript`. If it lives elsewhere, enter its path in Settings (⌘,). |
+| "Ghostscript bulunamadı" (not found) | Ghostscript comes inside the app. If a Ghostscript path is set in Settings (⌘,), clear it; otherwise download and install PrinterManager again. |
 | "USB'deki yazıcı: Bulunamadı" (no printer on USB) | Turn the printer on and check the USB cable, then press refresh in the Setup Assistant. |
 | "Yazıcı kuyruğu durdurulmuş" (queue stopped) | System Settings > Printers & Scanners > Print Queue > Resume, or `cupsenable Samsung_CLP_300 && cupsaccept Samsung_CLP_300` |
 | "Kuyrukta bekleyen iş var" (pending jobs) | Delete old stuck jobs in the Print Queue window (`cancel -a Samsung_CLP_300`). |
@@ -204,7 +194,8 @@ The "Sistem sürücüsü" (system driver) mode remains in settings as the old pa
 
 - macOS 13 (Ventura) or later; Intel or Apple Silicon
 - Samsung CLP-300 connected over USB
-- [Ghostscript](https://www.ghostscript.com) (the Setup Assistant installs it with Homebrew)
+
+Nothing else to install: [Ghostscript](https://www.ghostscript.com) comes inside the app.
 
 ## Build from Source
 
@@ -218,6 +209,7 @@ open PrinterManager.xcodeproj
 The build compiles the helpers and puts them in the app bundle (`Contents/Helpers/`):
 
 - `foo2qpdl`: from the source in `ThirdParty/foo2qpdl`.
+- `gs`: copied from `ThirdParty/ghostscript/bin/gs`. It is Ghostscript 10.08.0, built from the official source tarball (Intel + Apple Silicon) with `ThirdParty/ghostscript/build-gs.sh`; Xcode does not rebuild it. Details: [ThirdParty/ghostscript](ThirdParty/ghostscript).
 - `cups-jobs`: from `Driver/cups-jobs.c`. Lists jobs that arrive in the queue, fetches their documents and deletes the job.
 - `clp300-status`: from `Driver/clp300-status.c`. Reads the printer's status, toners and status table over USB; sets power save with PJL.
 - `clp300-raster`: from `Driver/clp300-raster.c`. In photo mode, turns the raster into dots with Samsung's colour table.
@@ -235,4 +227,6 @@ Scripts:
 
 The bundled **foo2qpdl** is not covered by that license: it comes from the foo2zjs project (Rick Richardson; JBIG code by Markus Kuhn) and is licensed under **GPL-2.0**. The source is Debian's `foo2zjs_20200505dfsg0` package (the original site is offline). The app runs it as a separate program; none of its code is copied into Swift. The unmodified source, the license text (`COPYING`) and where it came from are in [ThirdParty/foo2qpdl](ThirdParty/foo2qpdl). The license text is also in the app bundle as `Contents/Resources/foo2qpdl-COPYING.txt`.
 
-**Ghostscript** (AGPL) is not distributed with the app; it is installed separately on the user's Mac with Homebrew. Samsung's colour table and halftone files are not distributed either; Photo Mode reads them where they are on the user's Mac.
+The bundled **Ghostscript** is not covered by that license either: it is Artifex Software's GPL Ghostscript 10.08.0, licensed under **AGPL-3.0**. The app runs it as a separate program (`Contents/Helpers/gs`); none of its code is copied into Swift or linked into the app. The URL and checksums of the unmodified official source tarball, the build script that reproduces the binary from it, and the license texts are in [ThirdParty/ghostscript](ThirdParty/ghostscript). In the app bundle, the AGPL text is `Contents/Resources/ghostscript-COPYING.txt`, and the licenses of the libraries compiled into Ghostscript (FreeType, libjpeg, Little CMS, libpng, zlib, OpenJPEG, jbig2dec, Brotli) and its fonts are in `ghostscript-THIRD-PARTY.txt`.
+
+Samsung's colour table and halftone files are not distributed; Photo Mode reads them where they are on the user's Mac.

@@ -15,13 +15,13 @@
 
 ## 📥 İndirme
 
-**[⬇️ PrinterManager v2.0.0 (DMG, 3,6 MB)](https://github.com/emregms/printer-manager/releases/download/v2.0.0/PrinterManager-v2.0.0.dmg)** · [Tüm sürümler](https://github.com/emregms/printer-manager/releases)
+**[⬇️ PrinterManager v2.0.0 (DMG, 29 MB)](https://github.com/emregms/printer-manager/releases/download/v2.0.0/PrinterManager-v2.0.0.dmg)** · [Tüm sürümler](https://github.com/emregms/printer-manager/releases)
 
 Intel ve Apple Silicon Mac'lerde çalışır (macOS 13 Ventura ve sonrası).
 
 ## 🚀 Yeni Bir Mac'e Kurulum
 
-Samsung'un eski sürücüsü **gerekmez**. Toplam 5–10 dakika sürer, bir kez yapılır.
+Samsung'un eski sürücüsü ve Homebrew **gerekmez**. Birkaç dakika sürer, bir kez yapılır.
 
 1. **DMG'yi açın** ve PrinterManager'ı yanındaki **Applications** klasörüne sürükleyin.
 2. **İlk açılış izni.** Uygulama Apple tarafından imzalı değil; macOS ilk açılışta engeller. Terminal'de bir kez:
@@ -32,7 +32,7 @@ Samsung'un eski sürücüsü **gerekmez**. Toplam 5–10 dakika sürer, bir kez 
 
    Terminal kullanmadan: uygulamayı açmayı deneyin, uyarıyı kapatın, sonra **Sistem Ayarları → Gizlilik ve Güvenlik** sayfasının altındaki **Yine de Aç** düğmesine basın ve Mac şifrenizi girin.
 3. **CLP-300'ü USB ile bağlayıp açın**, sonra PrinterManager'ı açın. **Kurulum Yardımcısı** kendiliğinden açılır:
-   - **1. Ghostscript:** Tek düğme. Homebrew kuruluysa Ghostscript doğrudan kurulur. Homebrew yoksa Terminal açılır ve önce Homebrew'u, sonra Ghostscript'i kurar; Mac şifrenizi ve bir kez Enter'ı ister.
+   - **1. Yazdırma Araçları:** Ghostscript ve foo2qpdl uygulamanın içinde gelir; bu adım baştan yeşil tiklidir.
    - **2. Yazıcı ve Sürücü:** **Sürücüyü Kur ve Yazıcıyı Ekle** → Mac şifreniz. Yazıcı, Yazıcılar ve Tarayıcılar'a "Samsung CLP-300" olarak eklenir.
    - **3. İsteğe bağlı:** Yazdırma penceresinin PDF menüsüne "PrinterManager ile Yazdır"ı ekleyin; "Oturum açılınca başlat"ı açın.
    - **4. Fotoğraf Modu:** Samsung'un renk dosyaları bulunursa açılabilir ([ayrıntı](#fotoğraf-modu)).
@@ -46,17 +46,7 @@ Samsung'un eski sürücüsü **gerekmez**. Toplam 5–10 dakika sürer, bir kez 
 
 Kurulum Yardımcısı'nı sonradan **PrinterManager menüsü → Kurulum Yardımcısı…** ile açabilirsiniz. Yazıcı bu Mac'te Samsung'un eski sürücüsüyle zaten ekliyse ona dokunulmaz; yanına "Samsung CLP-300 (PrinterManager)" adlı ikinci bir yazıcı eklenir.
 
-<details>
-<summary>Elle kurulum (Terminal)</summary>
-
-```bash
-# Homebrew yoksa: https://brew.sh
-brew install ghostscript
-```
-
-Sonra PrinterManager'da **Ayarlar (⌘,) → macOS Sürücüsü → Sürücüyü Kur ve Yazıcıyı Ekle**.
-
-</details>
+Sürücü Ayarlar'dan da kurulabilir: **Ayarlar (⌘,) → macOS Sürücüsü → Sürücüyü Kur ve Yazıcıyı Ekle**.
 
 ## ✨ Özellikler
 
@@ -102,7 +92,7 @@ Sonra PrinterManager'da **Ayarlar (⌘,) → macOS Sürücüsü → Sürücüyü
 5. **PDF** → pencereye sürükleyin ya da sol panelden seçin.
 6. **Yazdır** → Baskı Sırası'ndan izleyin.
 
-Gelişmiş ayarlar (⌘, ya da Sürücü başlığının yanındaki düğme): Ghostscript ve foo2qpdl yolları, ham gönderim kuyruğu, yazıcının güç tasarrufu. Boş bırakılan yollar otomatik bulunur.
+Gelişmiş ayarlar (⌘, ya da Sürücü başlığının yanındaki düğme): Ghostscript ve foo2qpdl yolları, ham gönderim kuyruğu, yazıcının güç tasarrufu. Yollar boş bırakılırsa uygulamanın içindeki araçlar kullanılır; kendi Ghostscript'inizi kullanmak isterseniz yolunu buraya girin.
 
 ## Başka Uygulamalardan Yazdırma
 
@@ -181,7 +171,7 @@ Ayar, yazıcının USB arayüzünden PJL komutlarıyla okunur ve yazılır. Yard
 | Durum | Ne yapmalı |
 |---|---|
 | "PrinterManager açılamıyor / hasarlı" | İlk açılış izni verilmemiş: `xattr -cr /Applications/PrinterManager.app` ya da Sistem Ayarları → Gizlilik ve Güvenlik → **Yine de Aç**. |
-| "Ghostscript bulunamadı" | Kurulum Yardımcısı'ndaki düğme, ya da `brew install ghostscript`. Başka bir yerdeyse yolunu Ayarlar'a (⌘,) girin. |
+| "Ghostscript bulunamadı" | Ghostscript uygulamanın içinde gelir. Ayarlar'da (⌘,) Ghostscript yolu girildiyse silin; girilmediyse PrinterManager'ı yeniden indirip kurun. |
 | "USB'deki yazıcı: Bulunamadı" | Yazıcıyı açın ve USB kablosunu kontrol edin, sonra Kurulum Yardımcısı'nda yenile düğmesine basın. |
 | "Yazıcı kuyruğu durdurulmuş" | Sistem Ayarları > Yazıcılar ve Tarayıcılar > Yazdırma Sırası > Sürdür, ya da `cupsenable Samsung_CLP_300 && cupsaccept Samsung_CLP_300` |
 | "Kuyrukta bekleyen iş var" | Önceki takılı işleri Yazdırma Sırası penceresinden silin (`cancel -a Samsung_CLP_300`). |
@@ -200,7 +190,8 @@ Ayar, yazıcının USB arayüzünden PJL komutlarıyla okunur ve yazılır. Yard
 
 - macOS 13 (Ventura) ya da sonrası; Intel ya da Apple Silicon
 - Samsung CLP-300, USB ile bağlı
-- [Ghostscript](https://www.ghostscript.com) (Kurulum Yardımcısı Homebrew ile kurar)
+
+Başka bir şey kurmak gerekmez: [Ghostscript](https://www.ghostscript.com) uygulamanın içinde gelir.
 
 ## Kaynak Koddan Derleme
 
@@ -214,6 +205,7 @@ open PrinterManager.xcodeproj
 Derleme sırasında yardımcı programlar otomatik derlenip uygulama paketine (`Contents/Helpers/`) konur:
 
 - `foo2qpdl`: `ThirdParty/foo2qpdl` klasöründeki kaynaktan.
+- `gs`: `ThirdParty/ghostscript/bin/gs`'den kopyalanır. Ghostscript 10.08.0'dır, `ThirdParty/ghostscript/build-gs.sh` ile resmi kaynak arşivinden (Intel + Apple Silicon) derlenmiştir; Xcode onu yeniden derlemez. Ayrıntı: [ThirdParty/ghostscript](ThirdParty/ghostscript).
 - `cups-jobs`: `Driver/cups-jobs.c`'den. Kuyruğa gelen işleri listeler, belgelerini alır ve işi siler.
 - `clp300-status`: `Driver/clp300-status.c`'den. Yazıcının durumunu, tonerlerini ve durum tablosunu USB'den okur; güç tasarrufunu PJL ile ayarlar.
 - `clp300-raster`: `Driver/clp300-raster.c`'den. Fotoğraf modunda Samsung'un renk tablosuyla rasteri noktalara çevirir.
@@ -231,4 +223,6 @@ Betikler:
 
 Uygulama içinde gelen **foo2qpdl** bu lisansa dahil değildir: foo2zjs projesinden (Rick Richardson; JBIG kodu Markus Kuhn) alınmıştır ve **GPL-2.0** lisanslıdır. Kaynak, Debian'ın `foo2zjs_20200505dfsg0` paketidir (asıl site artık yayında değil). Uygulama onu ayrı bir program olarak çalıştırır; kodu Swift'e kopyalanmamıştır. Değiştirilmemiş kaynak kodu, lisans metni (`COPYING`) ve kaynağın nereden alındığı [ThirdParty/foo2qpdl](ThirdParty/foo2qpdl) klasöründedir. Lisans metni uygulama paketinde `Contents/Resources/foo2qpdl-COPYING.txt` olarak da bulunur.
 
-**Ghostscript** (AGPL) uygulamayla dağıtılmaz; kullanıcının Mac'ine Homebrew ile ayrıca kurulur. Samsung'un renk tablosu ve yarım ton dosyaları da dağıtılmaz; Fotoğraf Modu onları kullanıcının Mac'indeki yerlerinden okur.
+Uygulama içinde gelen **Ghostscript** de bu lisansa dahil değildir: Artifex Software'in GPL Ghostscript 10.08.0'ıdır ve **AGPL-3.0** lisanslıdır. Uygulama onu ayrı bir program olarak çalıştırır (`Contents/Helpers/gs`); kodu Swift'e kopyalanmamış ve uygulamaya bağlanmamıştır. Değiştirilmemiş resmi kaynak arşivinin adresi ve sağlama toplamları, ikiliyi bu kaynaktan yeniden üreten derleme betiği ve lisans metinleri [ThirdParty/ghostscript](ThirdParty/ghostscript) klasöründedir. Uygulama paketinde AGPL metni `Contents/Resources/ghostscript-COPYING.txt`, Ghostscript'e derlenen kütüphanelerin (FreeType, libjpeg, Little CMS, libpng, zlib, OpenJPEG, jbig2dec, Brotli) ve yazı tiplerinin lisansları `ghostscript-THIRD-PARTY.txt` olarak bulunur.
+
+Samsung'un renk tablosu ve yarım ton dosyaları dağıtılmaz; Fotoğraf Modu onları kullanıcının Mac'indeki yerlerinden okur.
