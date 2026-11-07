@@ -126,8 +126,12 @@ struct ContentView: View {
             PrintInbox.shared.start()
         }
         .onReceive(PrintInbox.shared.$pending) { document in
+            // @Published değeri atamadan önce yayınlar; markTaken bir sonraki
+            // döngüde çalışsın ki atamanın altında kalmasın
             if let document = document {
-                openIncoming(document)
+                DispatchQueue.main.async {
+                    openIncoming(document)
+                }
             }
         }
         .onChange(of: printManager.isPrinting) { isPrinting in
@@ -162,7 +166,7 @@ struct ContentView: View {
         
         selectedPDF?.stopAccessingSecurityScopedResource()
         selectedPDF = document.url
-        PrintInbox.shared.markTaken()
+        PrintInbox.shared.markTaken(document)
         
         printManager.addLog("PDF yüklendi: \(document.title) (\(document.source))")
         if let pageCount = PDFProcessor.shared.pageCount(of: document.url) {

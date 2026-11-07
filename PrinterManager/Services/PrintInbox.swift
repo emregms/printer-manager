@@ -28,6 +28,8 @@ final class PrintInbox: ObservableObject {
     
     private var queues: [String] = []
     private var timer: Timer?
+    /// App Nap arka plandaki zamanlayıcıyı dakikalarca geciktirebilir
+    private var activity: NSObjectProtocol?
     private var isChecking = false
     /// PDF olmadığı için alınmayan işler (her kontrolde yeniden denenmesin)
     private var skippedJobs: Set<Int> = []
@@ -41,10 +43,17 @@ final class PrintInbox: ObservableObject {
         guard timer == nil else { return }
         Self.removeOldInboxFiles()
         refreshQueues()
-        // pminbox bu sırada USB'yi meşgul ediyor; çabuk alınsın
-        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+        // pminbox bu sırada USB'yi meşgul ediyor; çabuk alınsın. Belge genellikle
+        // uygulama arkadayken (Safari'den yazdırırken) gelir.
+        activity = ProcessInfo.processInfo.beginActivity(
+            options: .userInitiatedAllowingIdleSystemSleep,
+            reason: "CLP-300 kuyruğuna gelen belgeleri izleme")
+        let timer = Timer(timeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.checkQueues() }
         }
+        // .common: menü ya da pencere sürüklenirken de çalışsın
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
     }
     
     /// İzlenecek kuyrukları (PrinterManager sürücüsüyle kurulanlar) yeniden bulur
@@ -68,9 +77,13 @@ final class PrintInbox: ObservableObject {
         }
     }
     
-    /// Pencere belgeyi açtı
-    func markTaken() {
-        pending = nil
+    /// Pencere belgeyi açtı. Yalnızca aynı belgeyse temizler: arada yenisi gelmiş olabilir.
+    /// $pending'i dinleyen yerden doğrudan çağırmayın: @Published değeri atamadan önce
+    /// yayınlar, iç içe yapılan `nil` ataması dıştaki atamanın altında kalır.
+    func markTaken(_ document: IncomingDocument) {
+        if pending == document {
+            pending = nil
+        }
     }
     
     // MARK: - Private Methods
