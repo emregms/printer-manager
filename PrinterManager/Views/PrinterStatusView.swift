@@ -50,8 +50,13 @@ struct PrinterStatusView: View {
                 .frame(width: 26)
             
             VStack(alignment: .leading, spacing: 3) {
-                Text(monitor.status?.title ?? (monitor.errorMessage == nil ? "Yazıcı durumu okunuyor..." : "Yazıcı durumu alınamadı"))
-                    .font(.headline)
+                HStack(spacing: 8) {
+                    Text(monitor.status?.title ?? (monitor.errorMessage == nil ? "Yazıcı durumu okunuyor..." : "Yazıcı durumu alınamadı"))
+                        .font(.headline)
+                    if let heat = monitor.status?.heat {
+                        HeatChip(heat: heat, hotSince: monitor.hotSince, sleepMinutes: monitor.powerSaveMinutes)
+                    }
+                }
                 if let advice = monitor.status?.advice ?? monitor.errorMessage {
                     Text(advice)
                         .font(.caption)
@@ -145,6 +150,59 @@ struct PrinterStatusView: View {
         case .ok: return .green
         case .warning: return .orange
         case .error: return .red
+        }
+    }
+}
+
+/// Fırın sıcak mı, uykuda mı
+struct HeatChip: View {
+    let heat: PrinterStatus.Heat
+    let hotSince: Date?
+    let sleepMinutes: Int?
+    
+    var body: some View {
+        Label(text, systemImage: heat.symbol)
+            .font(.caption.weight(.medium))
+            .foregroundColor(color)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(color.opacity(0.12)))
+            .help(helpText)
+    }
+    
+    /// Uygulamanın gördüğü boşta kalma süresi; yazıcının sayacı daha önce başlamış olabilir
+    private var idleMinutes: Int? {
+        guard heat == .hot, let hotSince = hotSince else { return nil }
+        return Int(Date().timeIntervalSince(hotSince) / 60)
+    }
+    
+    private var text: String {
+        guard let idle = idleMinutes else { return heat.title }
+        if let sleep = sleepMinutes, sleep > idle {
+            return "\(heat.title) · en geç \(sleep - idle) dk'da uyur"
+        }
+        return idle > 0 ? "\(heat.title) · \(idle) dk'dır boşta" : heat.title
+    }
+    
+    private var color: Color {
+        switch heat {
+        case .hot, .warming: return .orange
+        case .sleeping: return .blue
+        case .printing: return .accentColor
+        }
+    }
+    
+    private var helpText: String {
+        switch heat {
+        case .hot:
+            let sleep = sleepMinutes.map { "\($0) dk" } ?? "ayarlı süre"
+            return "Fırın sıcak tutuluyor ve enerji harcıyor. Boşta \(sleep) kalınca kendiliğinden uyur; süreyi Ayarlar (⌘,) → Yazıcı Güç Tasarrufu'ndan kısaltabilirsiniz."
+        case .sleeping:
+            return "Fırın kapalı, enerji harcamıyor. İlk sayfa ısınma yüzünden biraz geç başlar."
+        case .warming:
+            return "Fırın ısınıyor; birazdan yazdırmaya hazır olur."
+        case .printing:
+            return "Yazıcı şu an sayfa basıyor."
         }
     }
 }

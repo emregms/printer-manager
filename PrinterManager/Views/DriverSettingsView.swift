@@ -33,6 +33,8 @@ struct DriverSettingsView: View {
             
             OtherAppsSection()
             
+            PowerSaveSection()
+            
             Section("Lisans") {
                 Text("foo2qpdl, foo2zjs projesinden (Rick Richardson) alınmıştır ve GPL-2.0 lisanslıdır. Uygulama onu ayrı bir program olarak çalıştırır; kaynak kodu ve lisans metni repodaki ThirdParty/foo2qpdl klasöründedir.")
                     .font(.caption)
@@ -251,6 +253,105 @@ struct OtherAppsSection: View {
             message = "Oturum açılışı ayarlanamadı: \(error.localizedDescription)"
         }
         opensAtLogin = PrintInbox.opensAtLogin
+    }
+}
+
+/// Yazıcının boşta sıcak bekleme süresi; yazıcının kendi ayarıdır, PJL ile okunur ve yazılır
+struct PowerSaveSection: View {
+    @ObservedObject private var monitor = PrinterStatusMonitor.shared
+    @State private var settings: PrinterPowerSave.Settings?
+    @State private var minutes = PrinterPowerSave.choices[0]
+    @State private var isWorking = false
+    @State private var message: String?
+    
+    var body: some View {
+        Section {
+            Picker("Boşta kalınca uyku", selection: $minutes) {
+                ForEach(PrinterPowerSave.choices, id: \.self) { value in
+                    Text("\(value) dk sonra").tag(value)
+                }
+            }
+            
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    if let settings = settings {
+                        Text(currentText(settings))
+                        if let stored = settings.stored, stored != settings.current {
+                            Text("Yazıcıya kaydedilen: \(stored) dk. Yazıcıyı kapatıp açınca geçerli olur.")
+                                .foregroundColor(.orange)
+                        }
+                    } else {
+                        Text(isWorking ? "Yazıcıdan okunuyor..." : "Yazıcıdan okunmadı")
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .font(.caption)
+                
+                Spacer()
+                
+                if isWorking {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+                Button("Yenile", action: load)
+                    .disabled(isWorking)
+                Button("Yazıcıya Uygula", action: apply)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isWorking || (settings?.isEnabled == true && minutes == settings?.stored))
+            }
+            
+            if let message = message {
+                Text(message)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .textSelection(.enabled)
+            }
+        } header: {
+            Text("Yazıcı Güç Tasarrufu")
+        } footer: {
+            Text("""
+            CLP-300 baskıdan sonra fırınını sıcak tutar ve bu süre dolunca uykuya geçer; \
+            en kısa süre 5 dakikadır. Ayar yazıcının belleğine yazılır ve yazıcı kapatılıp \
+            açılınca geçerli olur. Uyuyan yazıcıda ilk sayfa ısınma yüzünden biraz geç başlar.
+            """)
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+        .onAppear(perform: load)
+    }
+    
+    private func currentText(_ settings: PrinterPowerSave.Settings) -> String {
+        guard settings.isEnabled else { return "Güç tasarrufu kapalı: yazıcı hep sıcak bekliyor" }
+        return settings.current.map { "Şu an: boşta \($0) dk kalınca uyuyor" } ?? "Şu anki süre okunamadı"
+    }
+    
+    private func load() {
+        run { try PrinterPowerSave.read() }
+    }
+    
+    private func apply() {
+        let minutes = minutes
+        run { try PrinterPowerSave.apply(minutes: minutes) }
+    }
+    
+    /// Yazıcıyla konuşma birkaç saniye sürebilir; ana iş parçacığını tutmaz
+    private func run(_ work: @escaping () throws -> PrinterPowerSave.Settings) {
+        isWorking = true
+        message = nil
+        Task {
+            let result = await Task.detached { Result { try work() } }.value
+            await MainActor.run {
+                switch result {
+                case .success(let settings):
+                    self.settings = settings
+                    minutes = settings.stored ?? settings.current ?? minutes
+                    monitor.powerSaveMinutes = settings.isEnabled ? settings.current : nil
+                case .failure(let error):
+                    message = error.localizedDescription
+                }
+                isWorking = false
+            }
+        }
     }
 }
 

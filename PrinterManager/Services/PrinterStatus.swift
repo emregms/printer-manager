@@ -64,6 +64,38 @@ struct PrinterStatus: Equatable {
             || (code[1] == 0x01 && [0x04, 0x05, 0x08].contains(code[2]))
     }
     
+    /// Isıtıcının (fuser) durumu: "Hazır"da sıcak bekler, güç tasarrufunda soğur
+    enum Heat {
+        case hot, sleeping, warming, printing
+        
+        var title: String {
+            switch self {
+            case .hot, .printing: return "Fırın sıcak"
+            case .sleeping: return "Fırın soğuk"
+            case .warming: return "Fırın ısınıyor"
+            }
+        }
+        
+        var symbol: String {
+            switch self {
+            case .hot, .printing: return "flame.fill"
+            case .sleeping: return "moon.zzz.fill"
+            case .warming: return "thermometer.sun.fill"
+            }
+        }
+    }
+    
+    var heat: Heat? {
+        guard !blocksPrinting, code[1] == 0x01 else { return nil }
+        switch code[2] {
+        case 0x01: return hasJob ? .printing : .hot
+        case 0x03: return .sleeping
+        case 0x05: return .warming
+        case 0x04: return .printing
+        default: return nil
+        }
+    }
+    
     var codeText: String {
         code.map { String(format: "%02X", $0) }.joined(separator: " ")
     }
@@ -108,12 +140,14 @@ enum PrinterStatusReader {
     enum ReadError: LocalizedError {
         case helperMissing
         case notConnected
+        case busy
         case failed(String)
         
         var errorDescription: String? {
             switch self {
             case .helperMissing: return "Durum aracı (clp300-status) uygulama paketinde yok"
             case .notConnected: return "CLP-300 USB'de bulunamadı. Yazıcı açık ve bağlı mı?"
+            case .busy: return "Yazıcı meşgul (yazdırıyor olabilir); baskı bitince tekrar deneyin."
             case .failed(let message): return "Durum okunamadı: \(message)"
             }
         }
@@ -196,7 +230,7 @@ enum PrinterStatusReader {
         )
     }
     
-    fileprivate static func run(_ arguments: [String]) throws -> String {
+    static func run(_ arguments: [String]) throws -> String {
         let process = Process()
         process.executableURL = helper
         process.arguments = arguments
@@ -215,11 +249,59 @@ enum PrinterStatusReader {
             return String(data: output, encoding: .utf8) ?? ""
         case 3:
             throw ReadError.notConnected
+        case 5:
+            throw ReadError.busy
         default:
             let message = String(data: errors, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             throw ReadError.failed(message.isEmpty ? "kod \(process.terminationStatus)" : message)
         }
+    }
+}
+
+// MARK: - Power Save
+
+/// Yazıcının boştayken uykuya (güç tasarrufu, ısıtıcı soğur) geçme süresi.
+/// CLP-300'de denendi: PJL DEFAULT POWERSAVETIME dakika alır, 5/10/15/30/45/60/120'ye
+/// yuvarlar; DINQUIRE kademe (0-6), INQUIRE geçerli dakikayı döndürür. Yeni kalıcı
+/// değer hemen değil, büyük olasılıkla yazıcı kapatılıp açılınca geçerli olur.
+enum PrinterPowerSave {
+    static let choices = [5, 10, 15, 30, 45, 60, 120]
+    
+    struct Settings: Equatable {
+        /// Şu an geçerli süre (dakika)
+        let current: Int?
+        /// Yazıcıda kayıtlı (açılışta geçerli olacak) süre
+        let stored: Int?
+        let isEnabled: Bool
+    }
+    
+    /// Yazıcıdan okur (~1 sn). Yazdırırken yazıcı meşgul hatası verir.
+    static func read() throws -> Settings {
+        let current = try query("@PJL INQUIRE POWERSAVETIME").flatMap(Int.init)
+        let storedIndex = try query("@PJL DINQUIRE POWERSAVETIME").flatMap(Int.init)
+        let enabled = try query("@PJL INQUIRE POWERSAVE")
+        return Settings(
+            current: current,
+            stored: storedIndex.flatMap { choices.indices.contains($0) ? choices[$0] : nil },
+            isEnabled: enabled?.uppercased() != "OFF"
+        )
+    }
+    
+    /// Güç tasarrufunu açar ve süreyi yazıcıya kaydeder; okunan ayarları döndürür
+    static func apply(minutes: Int) throws -> Settings {
+        _ = try PrinterStatusReader.run(["pjl", "@PJL DEFAULT POWERSAVE = ON"])
+        _ = try PrinterStatusReader.run(["pjl", "@PJL DEFAULT POWERSAVETIME = \(minutes)"])
+        return try read()
+    }
+    
+    /// "@PJL INQUIRE X\r\nDEĞER\r\n\f" yanıtından değeri alır
+    private static func query(_ command: String) throws -> String? {
+        let output = try PrinterStatusReader.run(["pjl", command])
+        return output
+            .components(separatedBy: CharacterSet(charactersIn: "\r\n\u{0C}"))
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .first { !$0.isEmpty && !$0.hasPrefix("@PJL") }
     }
 }
 
@@ -433,6 +515,12 @@ final class PrinterStatusMonitor: ObservableObject {
     @Published private(set) var status: PrinterStatus?
     @Published private(set) var errorMessage: String?
     @Published private(set) var isLoading = false
+    /// Yazıcının boşta sıcak görüldüğü ilk an (uygulama açıkken)
+    @Published private(set) var hotSince: Date?
+    /// Yazıcının uyku süresi (dakika); Ayarlar'da yazıcıdan okununca bilinir
+    @Published var powerSaveMinutes: Int? = UserDefaults.standard.object(forKey: "printerPowerSaveMinutes") as? Int {
+        didSet { UserDefaults.standard.set(powerSaveMinutes, forKey: "printerPowerSaveMinutes") }
+    }
     
     private var timer: Timer?
     
@@ -460,9 +548,17 @@ final class PrinterStatusMonitor: ObservableObject {
             case .success(let status):
                 self.status = status
                 errorMessage = nil
+                if status.heat == .hot {
+                    if hotSince == nil {
+                        hotSince = Date()
+                    }
+                } else {
+                    hotSince = nil
+                }
             case .failure(let error):
                 status = nil
                 errorMessage = error.localizedDescription
+                hotSince = nil
             }
             isLoading = false
         }
