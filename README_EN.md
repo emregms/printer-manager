@@ -150,13 +150,13 @@ In the standard colour path, Ghostscript converts with a generic CMYK profile an
 **The colour data can come from two sources.** The Setup Assistant, and the caption under the switch while Photo Mode is on, say which one is in use.
 
 1. **PrinterManager's own data** comes inside the app, so it is ready on every Mac and needs none of Samsung's files. It is computed from scratch by `Scripts/make-colour-tables.py`: nothing is copied from Samsung's data, and Samsung's data is not used as input. It ships under the app's license (MIT).
-   - **Colour table:** solved from a printer model (Neugebauer) of typical colour laser toners. Gamut mapping is done in Oklab: pure sRGB colours go to solid toner, low-chroma colours such as greys, skin and sky barely move, and colours the printer can't reach are clipped keeping their hue. Low GCR: mid greys from C+M+Y, black only in dark tones. Total toner is limited to 240%.
-   - **Halftone:** clustered dots, ~95 lpi; C 18.4°, M 71.6°, Y 0°, K 45°. At 1200x600 the pixels are not square, so the dots are computed round in physical space. Dot gain is built into the thresholds: 50% input gives 40% coverage.
+   - **Colour table:** solved from a printer model (Neugebauer) of typical colour laser toners. Gamut mapping is done in Oklab: pure sRGB colours go to solid toner, low-chroma colours such as greys, skin and sky barely move, and colours the printer can't reach are clipped keeping their hue. Low GCR: mid greys from C+M+Y, black only in dark tones. Total toner is limited to 240%. Prints a little lighter than the screen (mid grey ~12 L* lighter); saturated colours are not lightened.
+   - **Halftone:** clustered dots, ~95 lpi; C 18.4°, M 71.6°, Y 0°, K 45°. At 1200x600 the pixels are not square, so the dots are computed round in physical space. Dot gain is built into the thresholds: the CLP-300's toner spreads a lot, so 50% input gives only ~16% coverage.
 2. **Samsung's colour files** come with Samsung's old CLP-300 Mac driver. They are **not** in the repo or the app. If present, they are read in place and take priority.
 
 Search order: `/Library/Printers/Samsung/CLP-300` (where Samsung's driver installs them) → `~/Library/Application Support/PrinterManager/CLP-300` (no admin rights needed) → inside the app. If you have a Mac with Samsung's driver installed, you can put its `CLP-300` folder in the second place on the new Mac; HP no longer offers a macOS driver for this printer.
 
-Our own data was tested on the computer without printing (`Scripts/simulate-photo-mode.py`: grey balance, tone ramps, page size). It has not been compared on a real print yet; if the printer prints darker than the model predicts, the data is regenerated with `--gain-at-40`.
+Our own data was first tested on the computer (`Scripts/simulate-photo-mode.py`: grey balance, tone ramps, page size), then tuned on the CLP-300 with three A4 test sheets. The first guess (40% coverage looking like 50% on paper) printed far too dark; dot gain was set to `--gain-at-40 0.86` and lightness to `--lighten 12`. If another CLP-300 or toner prints darker or lighter, the data is regenerated with these two values.
 
 For photos, **1200x600 dpi** is recommended: a full-page A4 photo is at most ~8 MB. At 1200x1200 it is ~12–13 MB and you are asked before it is sent.
 

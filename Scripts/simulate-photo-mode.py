@@ -11,9 +11,10 @@ Her veri kümesine bir sütun (en çok üç) ayrılan bir A4 test sayfası (gri 
 rampaları, koyu tonlar, renk kartı yamaları, çizimle üretilmiş bir "fotoğraf")
 uygulamayla aynı komutlarla basılır:
 gs (ppmraw) | clp300-raster | foo2qpdl. Sonra bitcmyk açılır, yamalar ve küçük
-bloklar ortalanır, basit nokta kazancı (%40 → %50) ve make-colour-tables.py'deki
-yazıcı modeli uygulanır. Model kaba bir tahmindir: sonuçlar veri kümelerini
-birbiriyle karşılaştırmak içindir, gerçek baskının ölçümü değildir.
+bloklar ortalanır, basit nokta kazancı (make-colour-tables.py'nin varsayılanı ya da
+--printer-gain) ve make-colour-tables.py'deki yazıcı modeli uygulanır. Model kaba
+bir tahmindir: sonuçlar veri kümelerini birbiriyle karşılaştırmak içindir, gerçek
+baskının ölçümü değildir.
 
 Çıktılar: rapor.md, her veri kümesi için önizleme PNG'si, birden çok veri kümesi
 varsa yan yana karşılaştırma sayfası (her sütun kendi veri kümesiyle, 1200x600) hem
@@ -43,6 +44,7 @@ GEOMETRY = {  # QPDLDriver.swift ile aynı: genişlik, yükseklik, kenar kırpma
     "1200x1200": (9920, 14032, 150, 100),
 }
 MARGIN, GUTTER = 28.0, 14.0
+PRINTER_GAIN = model.DOT_GAIN_AT_40  # yazıcının varsayılan nokta kazancı (%40 → bu)
 
 # Renk kartı yamaları: yaygın yayımlanan 24 yamalı kartın yaklaşık sRGB değerleri
 CHECKER = [
@@ -234,7 +236,7 @@ def coverage(page, x0, y0, x1, y1):
 
 def appearance(digital):
     """Sayısal kaplama → kağıttaki renk (XYZ): nokta kazancı, sonra yazıcı modeli"""
-    return model.printed(model.gain(np.asarray(digital, dtype=float)))
+    return model.printed(model.gain(np.asarray(digital, dtype=float), PRINTER_GAIN))
 
 
 def to_pixels(box, resolution, shrink=0.2):
@@ -291,7 +293,7 @@ def ink_usage(page):
 
 def report(names, resolutions, results, sizes, inks, chart):
     lines = ["# Fotoğraf modu benzetimi", "",
-             "Model: nokta kazancı %40 → %50, make-colour-tables.py'deki toner varsayımları. "
+             f"Model: nokta kazancı %40 → %{PRINTER_GAIN * 100:.0f}, make-colour-tables.py'deki toner varsayımları. "
              "Sayılar veri kümelerini karşılaştırmak içindir; gerçek baskı ölçümü değildir.", ""]
     res = "1200x600" if "1200x600" in resolutions else resolutions[0]
     lines += [f"## Gri rampa ({res}): L* ve renk sapması C*ab", "",
@@ -352,13 +354,17 @@ def report(names, resolutions, results, sizes, inks, chart):
 
 
 def main():
+    global PRINTER_GAIN
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--raster", required=True)
     parser.add_argument("--foo2qpdl", required=True)
     parser.add_argument("--out", required=True)
     parser.add_argument("--resolutions", default="600x600,1200x600,1200x1200")
+    parser.add_argument("--printer-gain", type=float, default=PRINTER_GAIN,
+                        help="modeldeki yazıcının nokta kazancı: %%40 sayısal kaplamanın kağıttaki hâli")
     parser.add_argument("tables", nargs="+", help="AD=klasör")
     args = parser.parse_args()
+    PRINTER_GAIN = args.printer_gain
     os.makedirs(args.out, exist_ok=True)
     sets = [t.split("=", 1) for t in args.tables]
     if len(sets) > 3:

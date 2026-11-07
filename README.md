@@ -148,13 +148,13 @@ Standart renkli yolda Ghostscript genel bir CMYK profiliyle çevirir ve aynı no
 **Renk verisi iki kaynaktan gelebilir.** Hangisinin kullanıldığı Kurulum Yardımcısı'nda ve Fotoğraf Modu açıkken düğmenin altında yazar.
 
 1. **PrinterManager'ın kendi verisi**, uygulamanın içinde gelir; her Mac'te hazırdır, Samsung'un hiçbir dosyası gerekmez. `Scripts/make-colour-tables.py` ile baştan hesaplanır: Samsung'un verisinden kopyalanmaz, girdi olarak da kullanılmaz. Uygulamanın lisansıyla (MIT) gelir.
-   - **Renk tablosu:** Tipik renkli lazer tonerleri için bir yazıcı modelinden (Neugebauer) çözülür. Gamut eşleme Oklab'dadır: saf sRGB renkleri tam tonere gider, gri, ten ve gökyüzü gibi az doygun renkler neredeyse değişmez, yazıcının basamadığı renkler ton açısı korunarak kırpılır. Düşük GCR: orta griler C+M+Y ile, siyah yalnız koyu tonlarda. Toplam toner %240 ile sınırlı.
-   - **Yarım ton:** Kümelenmiş nokta, ~95 lpi; C 18,4°, M 71,6°, Y 0°, K 45°. 1200x600'de pikseller dikdörtgen olduğundan noktalar fiziksel olarak yuvarlak hesaplanır. Nokta kazancı eşiklere işlenmiştir: %50 giriş %40 kaplama verir.
+   - **Renk tablosu:** Tipik renkli lazer tonerleri için bir yazıcı modelinden (Neugebauer) çözülür. Gamut eşleme Oklab'dadır: saf sRGB renkleri tam tonere gider, gri, ten ve gökyüzü gibi az doygun renkler neredeyse değişmez, yazıcının basamadığı renkler ton açısı korunarak kırpılır. Düşük GCR: orta griler C+M+Y ile, siyah yalnız koyu tonlarda. Toplam toner %240 ile sınırlı. Kağıtta ekrandakinden biraz açık basar (orta gri ~12 L* açık); doygun renkler açılmaz.
+   - **Yarım ton:** Kümelenmiş nokta, ~95 lpi; C 18,4°, M 71,6°, Y 0°, K 45°. 1200x600'de pikseller dikdörtgen olduğundan noktalar fiziksel olarak yuvarlak hesaplanır. Nokta kazancı eşiklere işlenmiştir: CLP-300'de toner çok yayıldığından %50 giriş yalnızca ~%16 kaplama verir.
 2. **Samsung'un renk dosyaları**, Samsung'un eski CLP-300 Mac sürücüsüyle gelir; repoda ve uygulamada **yoktur**. Varsa yerinden okunur ve önceliklidir.
 
 Arama sırası: `/Library/Printers/Samsung/CLP-300` (Samsung sürücüsünün kurduğu yer) → `~/Library/Application Support/PrinterManager/CLP-300` (yönetici izni gerekmez) → uygulamanın içi. Samsung sürücüsü kurulu bir Mac'iniz varsa `CLP-300` klasörünü yeni Mac'te ikinci yere koyabilirsiniz; HP artık bu yazıcı için macOS sürücüsü sunmuyor.
 
-Kendi verimiz yazıcıya gönderilmeden bilgisayarda denendi (`Scripts/simulate-photo-mode.py`: gri dengesi, ton rampaları, sayfa boyutu). Gerçek baskıyla karşılaştırması henüz yapılmadı; yazıcı modelin tahmininden koyu basarsa veri `--gain-at-40` ile yeniden üretilir.
+Kendi verimiz önce bilgisayarda (`Scripts/simulate-photo-mode.py`: gri dengesi, ton rampaları, sayfa boyutu), sonra CLP-300'de üç A4 deneme sayfasıyla ayarlandı. İlk tahmin (%40 kaplama kağıtta %50) çok koyu bastı; nokta kazancı `--gain-at-40 0.86`, açıklık `--lighten 12` olarak seçildi. Başka bir CLP-300'de ya da tonerde koyu veya açık basarsa veri bu iki değerle yeniden üretilir.
 
 Fotoğraf için **1200x600 dpi** önerilir: A4 tam sayfa fotoğraf en çok ~8 MB. 1200x1200'de ~12–13 MB olur ve gönderilmeden önce sorulur.
 

@@ -15,7 +15,8 @@
  * Biçim ve kural Samsung'un dosyalarından çıkarıldı: eşik dağılımı yalnızca
  * "değer < eşik" kuralıyla açık tonları açık bırakır (%50 girişte ~%41
  * kaplama); yani matrisler yazıcının nokta kazancını zaten dengeler. Kendi
- * verimiz de aynı kurala göre üretilir (%50 girişte %40 kaplama).
+ * verimiz de aynı kurala göre üretilir; CLP-300'ün nokta kazancı deneme
+ * baskılarıyla bulundu (%50 girişte ~%16 kaplama).
  *
  *   clp300-raster <veri-klasörü> <600x600|1200x600|1200x1200>  <P6|P5  >bitcmyk|P4
  *

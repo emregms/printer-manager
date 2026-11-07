@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fotoğraf modu için PrinterManager'ın kendi CLP-300 renk verisini üretir.
 
-    python3 Scripts/make-colour-tables.py [çıktı-klasörü] [--gain-at-40 0.50]
+    python3 Scripts/make-colour-tables.py [çıktı-klasörü] [--gain-at-40 0.86] [--lighten 12]
 
 Varsayılan çıktı PrinterManager/Resources/ColorTables/CLP-300; uygulama bu klasörü
 paketin içine koyar (Contents/Resources/ColorTables/CLP-300). Dosya biçimi
@@ -22,6 +22,8 @@ Yöntem kısaca:
      Kaplama, nokta kazancı dengelendikten sonraki etkin kaplamadır.
   2. Hedef renk: sRGB, kağıt beyazı beyaz kabul edilerek (siyah nokta yazıcının en
      koyu siyahına ölçeklenir) Oklab'a çevrilir. Oklab'da mavi tonlar morlaşmaz.
+     Orta tonlar --lighten kadar açılır (deneme baskılarında kağıtta ekrandan biraz
+     açık baskı beğenildi); siyah ve beyaz yerinde kalır, doygun renkler daha az açılır.
   3. Gamut eşleme: her ton açısında sRGB'nin en doygun noktası (ana ve ara
      renkler) yazıcının en doygun noktasına taşınır (saf sRGB rengi tam toner);
      doygunluk bir dizden sonra yumuşakça sıkıştırılır, az doygun renkler (gri,
@@ -37,8 +39,9 @@ Yöntem kısaca:
      açıların tam sayı ızgaraya oturan hâlleri (C 18,4°, M 71,6°, Y 0°, K 45°).
      Hücreler süper hücrelerde sırayla büyür (en az ~240 gri düzeyi); 1200x600'de
      pikseller dikdörtgen olduğundan noktalar fiziksel olarak yuvarlak hesaplanır.
-  6. Nokta kazancı: bu yazıcıda %50 giriş yaklaşık %40 kaplama ister. Kazanç
-     kazanç(d) = d + k·d·(1-d) ile modellenir (k, kazanç(0,40) = 0,50 olacak
+  6. Nokta kazancı: CLP-300'de toner çok yayılır; deneme baskılarında %40 sayısal
+     kaplama kağıtta ~%86 göründü (ilk tahmin %50 çok koyu bastı). Kazanç
+     kazanç(d) = 1 - (1-d)^g ile modellenir (g, kazanç(0,40) = 0,86 olacak
      şekilde) ve eşiklere tersi işlenir; tablo etkin kaplamayla hesaplanır.
   7. GrayHT (siyah-beyaz fotoğraf, tablosuz yol): siyah ekranla aynı nokta düzeni;
      gri değerden K kaplamasına giden ton eğrisi eşiklerin içindedir.
@@ -70,7 +73,8 @@ PRIMARY_LAB = {
 }
 K_OVER = 0.28              # K'nın altındaki renk siyahı az koyulaştırır (K+C+M+Y ≈ L* 12)
 INK_LIMIT = 2.40           # en fazla toplam toner (C+M+Y+K, 1 = tek renk tam kaplama)
-DOT_GAIN_AT_40 = 0.50      # %40 sayısal kaplama kağıtta %50 görünür
+DOT_GAIN_AT_40 = 0.86      # %40 sayısal kaplama kağıtta %86 görünür (deneme baskılarıyla)
+LIGHTEN = 12.0             # orta gri bu kadar L* açık basılır (0: ekrandaki gibi)
 K_START = 0.62             # K bu Oklab açıklığının altında başlar (≈ L* 56, sRGB gri ~130)
 K_POWER = 1.3              # K'nın en koyuya doğru artış eğrisi
 CHROMA_KNEE = 0.75         # yazıcının en doygun noktasının bu oranına kadar doygunluk korunur
@@ -167,9 +171,26 @@ def printed(cmyk):
 
 
 def gain(d, at_40=DOT_GAIN_AT_40):
-    """Sayısal kaplama → kağıtta görünen kaplama (at_40: %40 sayısal kaplamanın görünen hâli)"""
-    k = (at_40 - 0.40) / (0.40 * 0.60)
-    return d + k * d * (1.0 - d)
+    """Sayısal kaplama → kağıtta görünen kaplama (at_40: %40 sayısal kaplamanın görünen hâli).
+    1 - (1-d)^g her kazançta tekdüze artar; d + k·d·(1-d) %64'ün üstünde geri dönüyordu."""
+    g = math.log(1.0 - at_40) / math.log(0.60)
+    return 1.0 - (1.0 - d) ** g
+
+
+def lift_factor(lighten, black_l=0.0):
+    """--lighten (L*) → açma katsayısı; siyah-beyaz aralığının ortası bu kadar açılır"""
+    return lighten / 116.0 / (0.25 * (1.0 - black_l))
+
+
+def lift(u, k):
+    """Orta tonları açar (u: 0 siyah, 1 beyaz); k ≤ 1 iken tekdüze artar"""
+    return u + k * u * (1.0 - u)
+
+
+def lift_inverse(v, k):
+    if k == 0:
+        return v
+    return ((1.0 + k) - np.sqrt((1.0 + k) ** 2 - 4.0 * k * v)) / (2.0 * k)
 
 
 def project(x, limit):
@@ -295,9 +316,10 @@ def corner_path(corners, steps=256):
 class Gamut:
     """sRGB'den yazıcı hedefine: siyah nokta, ton açısı, en doygun nokta ve doygunluk eşleme"""
 
-    def __init__(self, black_y):
+    def __init__(self, black_y, lighten=LIGHTEN):
         self.black_y = black_y
         self.black_l = float(oklab(self.target_xyz(np.zeros(3)))[0])
+        self.lift = lift_factor(lighten, self.black_l)
         srgb_corners = [np.array(c, dtype=float) for c in
                         [(1, 0, 0), (1, 1, 0), (0, 1, 0), (0, 1, 1), (0, 0, 1), (1, 0, 1)]]
         # Aynı sırada yazıcının karşılıkları: M+Y, Y, C+Y, C, C+M, M
@@ -327,6 +349,10 @@ class Gamut:
         sL, sC = np.interp(h, self.srgb_cusp[0], self.srgb_cusp[1]), np.interp(h, self.srgb_cusp[0], self.srgb_cusp[2])
         # Az doygun renkler yerinde kalır; sRGB'nin sınırına yaklaştıkça yazıcınınkine kayar
         reach = np.clip(C / sC, 0.0, 1.0)
+        # İstenirse orta tonlar açılır (siyah ve beyaz yerinde). Doygun renkler az açılır:
+        # onlar yazıcının en doygun noktasına gider, koyu yeşil rampası geri dönmesin.
+        u = (L - self.black_l) / (1.0 - self.black_l)
+        L = L + (1.0 - reach ** 2) ** 2 * (lift(u, self.lift) - u) * (1.0 - self.black_l)
         h2 = h + reach * np.interp(h, *self.hue_shift)
         pL, pC = self.cusp(h2)
         L2 = np.clip(L + reach ** 2 * (pL - sL), self.black_l, 1.0)
@@ -372,7 +398,7 @@ def black_amount(target, gamut):
     return darkness ** K_POWER
 
 
-def make_lut():
+def make_lut(lighten=LIGHTEN):
     # Yazıcının en koyu nötr siyahı: K tam, C+M+Y toner sınırının kalanı kadar
     k1 = np.ones(1)
     black_cmy, _ = solve_cmy(np.zeros((1, 3)), k1, np.full((1, 3), 0.4), weights=(1.0, 10.0, 10.0))
@@ -381,7 +407,7 @@ def make_lut():
     black_y = float(black_xyz[1])
     black_l = float(oklab(black_xyz)[0])
 
-    gamut = Gamut(black_y)
+    gamut = Gamut(black_y, lighten)
     grid = np.arange(NODES) * 255.0 / (NODES - 1)
     r, g, b = np.meshgrid(grid, grid, grid, indexing="ij")  # R en yavaş, B en hızlı
     rgb = np.stack([r, g, b], axis=-1).reshape(-1, 3) / 255.0
@@ -461,12 +487,16 @@ def screen_order(vector, dpi):
     return rank.reshape(height, width), {"n": n, "size": (width, height), "lpi": lpi, "angle": angle}
 
 
-def thresholds(rank, at_40, gray=False):
+def thresholds(rank, at_40, gray=False, lighten=LIGHTEN):
     """Açılma sırası → eşik. Kazanç dengelenir: pikselin açıldığı ton kazanç(sıra/N)."""
     tone = gain((rank + 0.5) / rank.size, at_40)  # kağıtta görünen kaplama
     if gray:
-        # Gri değer (sRGB) → K kaplaması = 1 - parlaklık (siyah nokta K'nın siyahına)
-        level = 255.0 * srgb_encode(1.0 - tone)
+        # Gri değer (sRGB) → K kaplaması = 1 - parlaklık (siyah nokta K'nın siyahına);
+        # --lighten orta tonları renk tablosundaki gibi açar
+        y = 1.0 - tone
+        if lighten:
+            y = lift_inverse(np.cbrt(y), lift_factor(lighten)) ** 3
+        level = 255.0 * srgb_encode(y)
     else:
         level = 255.0 * (1.0 - tone)
     return np.clip(np.floor(level + 1e-9) + 1, 1, 255).astype(int)
@@ -495,11 +525,13 @@ def main():
     parser.add_argument("output", nargs="?", default=DEFAULT_OUTPUT, help="çıktı klasörü")
     parser.add_argument("--gain-at-40", type=float, default=DOT_GAIN_AT_40,
                         help=f"%%40 sayısal kaplamanın kağıtta görünen kaplaması (varsayılan {DOT_GAIN_AT_40})")
+    parser.add_argument("--lighten", type=float, default=LIGHTEN,
+                        help=f"orta tonları bu kadar L* açar, en çok ~20 (varsayılan {LIGHTEN})")
     args = parser.parse_args()
     output = args.output
     os.makedirs(output, exist_ok=True)
 
-    cmyk, info = make_lut()
+    cmyk, info = make_lut(args.lighten)
     lab = info["black_lab"]
     print(f"En koyu siyah: CMYK {np.round(info['black'] * 100).astype(int)} → L*{lab[0]:.1f} a*{lab[1]:.1f} b*{lab[2]:.1f}")
     print(f"Renk tablosu: {info['clipped']} / {NODES ** 3} düğüm yazıcının gamutu dışında kırpıldı "
@@ -512,7 +544,8 @@ def main():
             rank, meta = screen_order(vector, dpi)
             write_screen(os.path.join(output, f"{color}HT_{suffix}"), thresholds(rank, args.gain_at_40))
             if color == "Black":
-                write_screen(os.path.join(output, f"GrayHT_{suffix}"), thresholds(rank, args.gain_at_40, gray=True))
+                write_screen(os.path.join(output, f"GrayHT_{suffix}"),
+                             thresholds(rank, args.gain_at_40, gray=True, lighten=args.lighten))
             print(f"{color}HT_{suffix}: {meta['size'][0]}x{meta['size'][1]}, {meta['angle']:.2f}°, "
                   f"{meta['lpi']:.1f} lpi, süper hücre {meta['n']}x{meta['n']}")
     print(f"Yazıldı: {output}")
