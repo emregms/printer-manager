@@ -11,7 +11,7 @@ enum AppWindow {
     /// `log show --predicate 'subsystem == "com.samsungclp300.printermanager"'`
     static let log = Logger(subsystem: "com.samsungclp300.printermanager", category: "window")
     
-    /// SwiftUI'nin pencere açma eylemi; menü çubuğu simgesi çizilince alınır
+    /// SwiftUI'nin pencere açma eylemi; pencere ya da menü çubuğu simgesi çizilince alınır
     static var openMain: (() -> Void)?
     /// Oturum açılışında başlatıldı: pencere gösterilmeden arka planda bekle
     static var startsHidden = false

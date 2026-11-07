@@ -35,6 +35,8 @@ struct DriverSettingsView: View {
             
             NetworkSharingSection()
             
+            BackgroundSection()
+            
             PowerSaveSection()
             
             Section("Lisans") {
@@ -263,6 +265,27 @@ struct OtherAppsSection: View {
             message = "Oturum açılışı ayarlanamadı: \(error.localizedDescription)"
         }
         opensAtLogin = PrintInbox.opensAtLogin
+    }
+}
+
+/// Pencere kapalıyken uygulama menü çubuğunda bekler; simge istenirse gizlenir
+struct BackgroundSection: View {
+    @AppStorage("showMenuBarIcon") private var showsMenuBarIcon = true
+    
+    var body: some View {
+        Section {
+            Toggle("Menü çubuğunda simgeyi göster", isOn: $showsMenuBarIcon)
+        } header: {
+            Text("Arka Planda Çalışma")
+        } footer: {
+            Text("""
+            Pencere kapanınca PrinterManager arka planda sürer; belge gelince pencere kendiliğinden açılır. \
+            Simge gizliyken pencereyi açmak için PrinterManager'ı Uygulamalar'dan ya da Spotlight'tan \
+            yeniden açın. Tamamen çıkmak: pencere açıkken ⌥⌘Q.
+            """)
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
     }
 }
 

@@ -6,6 +6,8 @@ struct PrinterManagerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var printManager = PrintManager()
     @StateObject private var settingsStore = SettingsStore()
+    /// Ayarlar'daki "Menü çubuğunda simgeyi göster" (BackgroundSection)
+    @AppStorage("showMenuBarIcon") private var showsMenuBarIcon = true
     
     init() {
         // Uygulama başlangıcında önceki temp dosyalarını temizle
@@ -47,8 +49,8 @@ struct PrinterManagerApp: App {
             }
         }
         
-        // Arka planda çalışırken tek görünen şey
-        MenuBarExtra {
+        // Arka planda çalışırken tek görünen şey; Ayarlar'dan gizlenebilir
+        MenuBarExtra(isInserted: $showsMenuBarIcon) {
             MenuBarContent()
                 .environmentObject(printManager)
         } label: {

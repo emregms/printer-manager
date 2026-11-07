@@ -133,6 +133,7 @@ How it works: macOS printer sharing announces the queue on the network, but with
 
 - Closing the window (red button, or ⌘Q, "Arka Planda Çalıştır" in the menu) doesn't quit the app: the Dock icon hides and a small printer icon stays in the menu bar.
 - To quit completely: menu bar icon → **PrinterManager'dan Çık**, or ⌥⌘Q.
+- Don't want the menu bar icon? Settings (⌘,) → **Arka Planda Çalışma** → turn off "Menü çubuğunda simgeyi göster". The app still runs in the background; to open the window, open PrinterManager again from Applications or Spotlight.
 - The window opens by itself when a document arrives or a print needs an answer (flip pages, printer error).
 - No polling while idle: when a job arrives, `pminbox` sends a system notification that wakes the app (plus a light fallback check every 30 s). Printer status is read only while the window is open. Measured CPU use with the window open: 0–0.5%.
 

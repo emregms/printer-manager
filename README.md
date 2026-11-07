@@ -131,6 +131,7 @@ Nasıl çalışıyor: macOS'un yazıcı paylaşımı kuyruğu ağda duyurur, ama
 
 - Pencereyi kapatmak (kırmızı düğme ya da ⌘Q, menüde "Arka Planda Çalıştır") uygulamayı kapatmaz: Dock simgesi gizlenir, menü çubuğunda küçük bir yazıcı simgesi kalır.
 - Tamamen çıkmak: menü çubuğu simgesi → **PrinterManager'dan Çık** ya da ⌥⌘Q.
+- Menü çubuğu simgesi istenmezse Ayarlar (⌘,) → **Arka Planda Çalışma** → "Menü çubuğunda simgeyi göster" kapatılır. Uygulama yine arka planda çalışır; pencereyi açmak için PrinterManager'ı Uygulamalar'dan ya da Spotlight'tan yeniden açın.
 - Belge gelince ya da yazdırma bir şey sorunca (kağıt çevirme, yazıcı hatası) pencere kendiliğinden açılır.
 - Boşta yoklama yoktur: kuyruğa iş gelince `pminbox` bir sistem bildirimi gönderir, uygulama o zaman uyanır (yedek olarak 30 sn'de bir hafif bir kontrol). Yazıcı durumu yalnızca pencere açıkken okunur. Pencere açıkken ölçülen işlemci kullanımı %0–0,5.
 

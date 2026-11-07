@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var printManager: PrintManager
     @EnvironmentObject var settingsStore: SettingsStore
+    @Environment(\.openWindow) private var openWindow
     @State private var selectedPDF: URL?
     @State private var showFilePicker = false
     @State private var showFlipPagesAlert = false
@@ -166,6 +167,8 @@ struct ContentView: View {
             AppWindow.mainWindowDisappeared()
         }
         .onAppear {
+            // Menü çubuğu simgesi gizliyse pencereyi yeniden açma eylemi yalnızca buradan gelir
+            AppWindow.openMain = { openWindow(id: "main") }
             AppWindow.mainWindowAppeared()
             PrintInbox.shared.printManager = printManager
             PrintInbox.shared.start()
