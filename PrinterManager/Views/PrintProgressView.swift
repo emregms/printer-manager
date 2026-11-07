@@ -24,12 +24,12 @@ struct PrintProgressView: View {
             HStack {
                 // Durum ikonu ve başlık
                 if printManager.isPaused {
-                    Image(systemName: "pause.circle.fill")
+                    Image(systemName: printManager.pauseReason == nil ? "pause.circle.fill" : "exclamationmark.octagon.fill")
                         .font(.title2)
-                        .foregroundColor(.orange)
-                    Text("Duraklatıldı")
+                        .foregroundColor(printManager.pauseReason == nil ? .orange : .red)
+                    Text(printManager.pauseReason == nil ? "Duraklatıldı" : "Yazıcı Hatası: Duraklatıldı")
                         .font(.headline)
-                        .foregroundColor(.orange)
+                        .foregroundColor(printManager.pauseReason == nil ? .orange : .red)
                 } else {
                     Image(systemName: printManager.isCleaningPhase ? "sparkles" : "printer.fill")
                         .font(.title2)
@@ -90,15 +90,26 @@ struct PrintProgressView: View {
                 HStack {
                     if printManager.isPaused {
                         Text("⏸ Bekleniyor...")
+                    } else if printManager.usesSmartTiming {
+                        Text(printManager.isCleaningPhase ? "Yazıcı sayfayı bitirip kayışı temizliyor..." : "Yazıcı sayfayı basıyor...")
                     } else {
                         Text(printManager.isCleaningPhase ? "Temizlik bekleniyor..." : "Yazdırılıyor...")
                     }
                     Spacer()
-                    Text("Kalan: \(Int(printManager.timeRemaining)) sn")
+                    // Akıllı modda süre önceki sayfalardan tahmin
+                    Text("Kalan: \(printManager.usesSmartTiming ? "≈" : "")\(Int(printManager.timeRemaining)) sn")
                         .monospacedDigit()
                 }
                 .font(.caption)
                 .foregroundColor(.secondary)
+                
+                if printManager.isPaused, let reason = printManager.pauseReason {
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             
             // Genel ilerleme ve tahmini süre

@@ -50,10 +50,57 @@ struct SettingsView: View {
                 
                 Divider()
                 
+                // Sayfa geçişi: yazıcının durumuna göre ya da sabit süre
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("Sayfa Geçişi", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.secondary)
+                    
+                    Picker("", selection: $settingsStore.pageTimingMode) {
+                        ForEach(PageTimingMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .disabled(printManager.isPrinting)
+                    
+                    Text(settingsStore.pageTimingMode == .smart
+                         ? "Her sayfa, yazıcı önceki sayfayı basıp kayışı temizledikten ve \"Hazır\" dedikten sonra gönderilir. Soğukken uzun, ısınınca kısa sürer. Durum okunamazsa aşağıdaki sabit süreler kullanılır."
+                         : "Her sayfadan sonra aşağıdaki süreler kadar beklenir.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                
+                if settingsStore.pageTimingMode == .smart {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Label("Ek Bekleme", systemImage: "hourglass")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("\(settingsStore.extraWaitSeconds) sn")
+                                .font(.subheadline.bold())
+                                .foregroundColor(.accentColor)
+                        }
+                        
+                        Slider(
+                            value: Binding(
+                                get: { Double(settingsStore.extraWaitSeconds) },
+                                set: { settingsStore.extraWaitSeconds = Int($0) }
+                            ),
+                            in: 0...15,
+                            step: 1
+                        )
+                        .tint(.accentColor)
+                    }
+                }
+                
                 // Yazdırma Süresi
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Label("Yazdırma Süresi", systemImage: "clock")
+                        Label(settingsStore.pageTimingMode == .smart ? "Yedek Yazdırma Süresi" : "Yazdırma Süresi", systemImage: "clock")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(.secondary)
                         Spacer()
@@ -76,7 +123,7 @@ struct SettingsView: View {
                 // Temizlik Süresi
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Label("Temizlik Süresi", systemImage: "sparkles")
+                        Label(settingsStore.pageTimingMode == .smart ? "Yedek Temizlik Süresi" : "Temizlik Süresi", systemImage: "sparkles")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(.secondary)
                         Spacer()

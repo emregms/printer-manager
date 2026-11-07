@@ -158,6 +158,8 @@ struct ContentView: View {
                 cleanDelay: TimeInterval(settingsStore.cleanDelaySeconds),
                 duplex: settingsStore.duplexEnabled,
                 grayscale: settingsStore.grayscaleMode,
+                timing: settingsStore.pageTimingMode,
+                extraWait: TimeInterval(settingsStore.extraWaitSeconds),
                 driver: settingsStore.driverSettings
             )
         }

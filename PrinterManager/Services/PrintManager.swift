@@ -17,13 +17,24 @@ class PrintManager: ObservableObject {
     @Published var showFlipPagesDialog: Bool = false
     /// Kullanıcıdan karar bekleyen soru (ön kontrol, büyük sayfa...)
     @Published var prompt: PrintPrompt?
+    /// Yazıcı hatası nedeniyle duraklatıldıysa sebebi
+    @Published var pauseReason: String?
+    /// Sayfa geçişi yazıcının durumuna göre (süreler tahmin)
+    @Published var usesSmartTiming: Bool = false
     
     /// Tahmini kalan toplam süre (saniye)
     var estimatedTimeRemaining: TimeInterval {
         guard isPrinting, let current = currentPage, totalPages > 0 else { return 0 }
         let remainingPages = totalPages - current
-        let perPageTime = printDelay + cleanDelay
+        let perPageTime = usesSmartTiming ? cycleEstimate + extraWait : printDelay + cleanDelay
         return TimeInterval(remainingPages) * perPageTime + timeRemaining
+    }
+    
+    /// Akıllı modda bir sayfanın (baskı + temizlik) tahmini süresi: son ölçümlerin
+    /// ortalaması. Soğuk yazıcıda ilk sayfa ~40 sn sürdü.
+    private var cycleEstimate: TimeInterval {
+        let recent = cycleDurations.suffix(3)
+        return recent.isEmpty ? 45 : recent.reduce(0, +) / Double(recent.count)
     }
     
     /// Bu boyutun üstündeki sayfa verisi için göndermeden önce sorulur.
@@ -40,6 +51,9 @@ class PrintManager: ObservableObject {
     private var printerName: String = ""
     private var printDelay: TimeInterval = 30
     private var cleanDelay: TimeInterval = 8
+    private var extraWait: TimeInterval = 0
+    /// Akıllı modda ölçülen sayfa süreleri (gönderimden yeniden "Hazır"a)
+    private var cycleDurations: [TimeInterval] = []
     private var isDuplex: Bool = false
     private var isGrayscale: Bool = false
     private var backend: PrintBackend?
@@ -54,6 +68,8 @@ class PrintManager: ObservableObject {
         cleanDelay: TimeInterval,
         duplex: Bool,
         grayscale: Bool = false,
+        timing: PageTimingMode = .fixed,
+        extraWait: TimeInterval = 0,
         driver: DriverSettings
     ) async {
         guard !isPrinting else { return }
@@ -62,6 +78,8 @@ class PrintManager: ObservableObject {
         self.printerName = printer
         self.printDelay = printDelay
         self.cleanDelay = cleanDelay
+        self.extraWait = extraWait
+        self.cycleDurations = []
         self.isDuplex = duplex
         self.isGrayscale = grayscale
         self.isCancelled = false
@@ -119,6 +137,32 @@ class PrintManager: ObservableObject {
             }
             
             addLog("\(totalPages) sayfa hazırlandı")
+            
+            // Yazıcının kendi bildirdiği durum (USB): sıkışma, kapak, kağıt, toner...
+            let printerStatus = await fetchPrinterStatus()
+            if let printerStatus = printerStatus {
+                logPrinterStatus(printerStatus)
+                if printerStatus.blocksPrinting {
+                    guard await ask(.printerProblem(printerStatus)) == .proceed else {
+                        addLog("Yazdırma başlatılmadı")
+                        await cleanup()
+                        return
+                    }
+                }
+            }
+            
+            // Sayfa geçişi: yazıcı durumu okunabiliyorsa ona göre, değilse sabit süre
+            switch (timing, printerStatus) {
+            case (.smart, .some):
+                usesSmartTiming = true
+                addLog("Sayfa geçişi: akıllı (her sayfa basılıp kayış temizlenince, +\(Int(extraWait)) sn)")
+            case (.smart, .none):
+                usesSmartTiming = false
+                addLog("⚠️ Yazıcı durumu okunamadı; sabit süre kullanılacak (\(Int(printDelay)) + \(Int(cleanDelay)) sn)")
+            case (.fixed, _):
+                usesSmartTiming = false
+                addLog("Sayfa geçişi: sabit süre (\(Int(printDelay)) + \(Int(cleanDelay)) sn)")
+            }
             
             // Sayfa sırasını belirle
             let pagesToPrint: [Int]
@@ -232,38 +276,158 @@ class PrintManager: ObservableObject {
         for (index, pageIndex) in pageIndices.enumerated() {
             guard !isCancelled else { break }
             
-            currentPage = pageIndex + 1
+            let pageNumber = pageIndex + 1
+            currentPage = pageNumber
             isCleaningPhase = false
             
-            // 1) ÖNCE YAZDIR - hemen başla
-            var didSend = false
-            do {
-                didSend = try await sendPage(at: pageIndex)
-                if didSend {
-                    addLog("✓ Sayfa \(pageIndex + 1) yazıcıya gönderildi")
+            // Hata ya da "yeniden gönder" seçilirse aynı sayfa tekrar denenir
+            pageLoop: while !isCancelled {
+                // 0) Yazıcı hata bildiriyorsa gönderme (kuyruk şişmesin); akıllı modda
+                //    önceki iş bitip yazıcı "Hazır" olana kadar da bekle
+                guard await waitUntilPrinterAccepts(pageNumber: pageNumber) else { break pageLoop }
+                
+                // 1) Gönder
+                var didSend = false
+                do {
+                    didSend = try await sendPage(at: pageIndex)
+                    if didSend {
+                        addLog("✓ Sayfa \(pageNumber) yazıcıya gönderildi")
+                    }
+                } catch {
+                    addLog("❌ Sayfa \(pageNumber) gönderilemedi: \(error.localizedDescription)")
+                    switch await ask(.sendFailed(page: pageNumber, error: error)) {
+                    case .proceed:
+                        continue pageLoop
+                    case .alternate:
+                        addLog("Sayfa \(pageNumber) atlandı")
+                    case .cancel:
+                        if !isCancelled {
+                            cancel()
+                        }
+                    }
+                    break pageLoop
                 }
-            } catch {
-                addLog("⚠️ Sayfa \(pageIndex + 1) yazdırma hatası: \(error.localizedDescription)")
-            }
-            
-            guard !isCancelled else { break }
-            
-            // Sayfa atlandıysa kağıt geçmedi, beklemeye gerek yok
-            guard didSend else { continue }
-            
-            // 2) SONRA BEKLE - yazdırma süresi (sayfa basılsın diye)
-            if index < pageIndices.count - 1 {
-                addLog("Sayfa \(pageIndex + 1) basılıyor, bekleniyor...")
-                await waitWithProgress(duration: printDelay, phase: .printing)
                 
-                guard !isCancelled else { break }
+                // Sayfa atlandıysa kağıt geçmedi, beklemeye gerek yok
+                guard didSend, !isCancelled else { break pageLoop }
                 
-                // 3) Temizlik beklemesi
-                isCleaningPhase = true
-                addLog("Belt temizleme bekleniyor...")
-                await waitWithProgress(duration: cleanDelay, phase: .cleaning)
+                // 2) Bekle: sayfa basılsın, kayış temizlensin
+                if usesSmartTiming {
+                    switch await waitForPageCycle(pageNumber: pageNumber) {
+                    case .done, .cancelled:
+                        break pageLoop
+                    case .resend:
+                        addLog("Sayfa \(pageNumber) yeniden gönderiliyor")
+                        continue pageLoop
+                    }
+                }
+                
+                // Sabit süre: son sayfadan sonra beklemeye gerek yok
+                if index < pageIndices.count - 1 {
+                    addLog("Sayfa \(pageNumber) basılıyor, bekleniyor...")
+                    await waitWithProgress(duration: printDelay, phase: .printing)
+                    
+                    guard !isCancelled else { break pageLoop }
+                    
+                    // 3) Temizlik beklemesi
+                    isCleaningPhase = true
+                    addLog("Belt temizleme bekleniyor...")
+                    await waitWithProgress(duration: cleanDelay, phase: .cleaning)
+                }
+                break pageLoop
             }
         }
+    }
+    
+    private enum PageCycleResult {
+        case done
+        case resend
+        case cancelled
+    }
+    
+    /// Gönderilen sayfayı izler: yazıcı işi alır, basar, kayışı temizler ve
+    /// yeniden "Hazır" olur. Soğukken uzun, ısınınca kısa sürer; sabit süre yok.
+    private func waitForPageCycle(pageNumber: Int) async -> PageCycleResult {
+        let start = Date()
+        let estimate = cycleEstimate
+        var started = false
+        var dataDone = false
+        var idleSince: Date?
+        
+        while !isCancelled {
+            let elapsed = Date().timeIntervalSince(start)
+            progress = min(elapsed / estimate, 0.97)
+            timeRemaining = max(estimate - elapsed, 0)
+            
+            guard let status = await fetchPrinterStatus() else {
+                // Durum okunamıyor: sabit süreye geri dön
+                addLog("⚠️ Yazıcı durumu okunamadı; sabit süreyle bekleniyor")
+                await waitWithProgress(duration: max(printDelay + cleanDelay - elapsed, 0), phase: .printing)
+                return .done
+            }
+            
+            if status.blocksPrinting {
+                await pauseForPrinterError(status)
+                guard !isCancelled else { return .cancelled }
+                
+                // Hata sırasında sayfa yarım kalmış olabilir
+                switch await ask(.pageAfterError(page: pageNumber)) {
+                case .alternate:
+                    _ = await waitUntilPrinterAccepts(pageNumber: pageNumber)
+                    return isCancelled ? .cancelled : .resend
+                case .proceed:
+                    started = true
+                    dataDone = true
+                    idleSince = nil
+                    continue
+                case .cancel:
+                    if !isCancelled {
+                        cancel()
+                    }
+                    return .cancelled
+                }
+            }
+            
+            if !started {
+                if status.isWorking {
+                    started = true
+                } else if elapsed > 120 {
+                    // İş kuyrukta takıldıysa waitForEmptyQueue bir sonraki sayfada yakalar
+                    addLog("⚠️ Yazıcı sayfa \(pageNumber)'i 2 dakikada almadı; kuyruğu kontrol edin")
+                    started = true
+                }
+            } else {
+                if !dataDone && !status.hasJob {
+                    // Sayfa verisi bitti; yazıcı sayfayı bitirip kayışı temizliyor
+                    dataDone = true
+                    isCleaningPhase = true
+                }
+                if status.isIdle {
+                    // Kısa bir "Hazır" anına güvenme: 2 sn kesintisiz hazır olsun
+                    idleSince = idleSince ?? Date()
+                    if Date().timeIntervalSince(idleSince!) >= 2 {
+                        break
+                    }
+                } else {
+                    idleSince = nil
+                }
+            }
+            
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+        guard !isCancelled else { return .cancelled }
+        
+        let duration = Date().timeIntervalSince(start)
+        cycleDurations.append(duration)
+        addLog("Sayfa \(pageNumber) basıldı, kayış temizlendi: \(Int(duration.rounded())) sn")
+        progress = 1
+        timeRemaining = 0
+        
+        if extraWait > 0 {
+            isCleaningPhase = true
+            await waitWithProgress(duration: extraWait, phase: .cleaning)
+        }
+        return isCancelled ? .cancelled : .done
     }
     
     /// Sayfayı seçili sürücüyle gönderir; gönderilmediyse (atlandı / iptal) false
@@ -324,6 +488,8 @@ class PrintManager: ObservableObject {
         timeRemaining = 0
         isCleaningPhase = false
         showFlipPagesDialog = false
+        pauseReason = nil
+        usesSmartTiming = false
         backend = nil
         
         // Temp dosyaları temizle
@@ -395,14 +561,6 @@ extension PrintManager {
             guard await ask(.pendingJobs(status)) == .proceed else { return nil }
         }
         addLog("✓ Ham gönderim kuyruğu: \(queue) (\(status.deviceURI))")
-        
-        // Yazıcının kendi bildirdiği durum (USB): sıkışma, kapak, kağıt, toner...
-        if let printerStatus = await fetchPrinterStatus() {
-            logPrinterStatus(printerStatus)
-            if printerStatus.blocksPrinting {
-                guard await ask(.printerProblem(printerStatus)) == .proceed else { return nil }
-            }
-        }
         
         // 3) PDF'in kopyası: gönderim sürerken dosya değişse de etkilenmesin,
         //    gs korumalı klasörlere (Masaüstü, Belgeler) ayrıca erişmek zorunda kalmasın
@@ -477,10 +635,6 @@ extension PrintManager {
             }
         }
         
-        // Yazıcı sıkışma / kapak açık / kağıt yok bildiriyorsa düzelmesini bekle
-        await waitForPrinterReady()
-        guard !isCancelled else { return false }
-        
         // Önceki iş takılı kaldıysa (yazıcı kapalı, kağıt bitti...) bitmesini bekle
         await waitForEmptyQueue(job.queue)
         guard !isCancelled else { return false }
@@ -537,17 +691,69 @@ extension PrintManager {
         try? PrinterStatusReader.read()
     }
     
-    /// Yazıcı baskıyı durduran bir hata bildiriyorsa düzelene kadar bekler (iptal edilebilir)
-    private func waitForPrinterReady() async {
-        var loggedKey: String?
+    /// Sayfa göndermeden önce: kullanıcı duraklattıysa ya da yazıcı hata bildiriyorsa
+    /// bekler; akıllı modda yazıcı "Hazır" olana kadar da bekler. İptalde false.
+    private func waitUntilPrinterAccepts(pageNumber: Int) async -> Bool {
+        var loggedBusy = false
         while !isCancelled {
-            guard let status = await fetchPrinterStatus(), status.blocksPrinting else { return }
-            if status.key != loggedKey {
-                addLog("⏳ Yazıcı: \(status.title). \(status.advice ?? "") Düzelince devam edilecek...")
-                loggedKey = status.key
+            if isPaused {
+                try? await Task.sleep(nanoseconds: 200_000_000)
+                continue
             }
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            // Okunamıyorsa gönderimi engelleme (eski davranış)
+            guard let status = await fetchPrinterStatus() else { return true }
+            
+            if status.blocksPrinting {
+                await pauseForPrinterError(status)
+                continue
+            }
+            if !usesSmartTiming || status.isIdle {
+                return true
+            }
+            if !loggedBusy {
+                addLog("⏳ Yazıcı meşgul (\(status.title)); sayfa \(pageNumber) için hazır olması bekleniyor...")
+                loggedBusy = true
+            }
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
         }
+        return false
+    }
+    
+    /// Yazıcı hatasında duraklatır: hata düzelip kullanıcı "Devam" diyene kadar
+    /// sayfa gönderilmez (iptal edilebilir)
+    private func pauseForPrinterError(_ status: PrinterStatus) async {
+        isPaused = true
+        pauseReason = [status.title, status.advice].compactMap { $0 }.joined(separator: ". ")
+        addLog("⛔ Yazıcı hatası: \(status.title). Gönderim durduruldu; sorunu giderip Devam'a basın.")
+        
+        var lastKey = status.key
+        var announcedFixed = false
+        while !isCancelled {
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            
+            if let current = await fetchPrinterStatus(), current.blocksPrinting {
+                if current.key != lastKey {
+                    addLog("⛔ Yazıcı hatası: \(current.title)")
+                    lastKey = current.key
+                    pauseReason = [current.title, current.advice].compactMap { $0 }.joined(separator: ". ")
+                }
+                // Hata sürerken "Devam" denirse yine bekle
+                isPaused = true
+                announcedFixed = false
+                continue
+            }
+            
+            if isPaused {
+                if !announcedFixed {
+                    addLog("✓ Yazıcı hatası düzeldi. Devam etmek için Devam'a basın.")
+                    pauseReason = "Hata düzeldi. Devam etmek için Devam'a basın."
+                    announcedFixed = true
+                }
+                continue
+            }
+            break
+        }
+        pauseReason = nil
     }
     
     private func logPrinterStatus(_ status: PrinterStatus) {
@@ -700,11 +906,39 @@ struct PrintPrompt: Identifiable {
             message: """
             \(status.advice ?? "Yazıcıyı kontrol edin.")
 
-            Yine de başlatırsanız uygulama her sayfadan önce sorunun düzelmesini bekler.
+            Başlatırsanız yazdırma duraklatılmış olarak bekler; sorun düzelip Devam'a \
+            basana kadar sayfa gönderilmez.
             """,
             actions: [
-                Action(title: "Yine de Başlat", choice: .proceed),
+                Action(title: "Başlat ve Bekle", choice: .proceed),
                 Action(title: "Vazgeç", choice: .cancel),
+            ]
+        )
+    }
+    
+    static func sendFailed(page: Int, error: Error) -> PrintPrompt {
+        PrintPrompt(
+            title: "Sayfa \(page) gönderilemedi",
+            message: "\(error.localizedDescription)\n\nSonraki sayfalar bu sorun çözülmeden gönderilmez.",
+            actions: [
+                Action(title: "Tekrar Dene", choice: .proceed),
+                Action(title: "Sayfayı Atla", choice: .alternate),
+                Action(title: "Yazdırmayı İptal Et", choice: .cancel),
+            ]
+        )
+    }
+    
+    static func pageAfterError(page: Int) -> PrintPrompt {
+        PrintPrompt(
+            title: "Sayfa \(page) düzgün basıldı mı?",
+            message: """
+            Yazıcı bu sayfa sırasında hata verdi. Kağıt sıkıştıysa ya da sayfa \
+            eksik çıktıysa yeniden gönderin.
+            """,
+            actions: [
+                Action(title: "Sayfayı Yeniden Gönder", choice: .alternate),
+                Action(title: "Düzgün, Devam Et", choice: .proceed),
+                Action(title: "Yazdırmayı İptal Et", choice: .cancel),
             ]
         )
     }

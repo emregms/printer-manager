@@ -16,6 +16,16 @@ class SettingsStore: ObservableObject {
         didSet { save() }
     }
     
+    /// Sayfalar arası: yazıcının durumuna göre (akıllı) ya da sabit süre
+    @Published var pageTimingMode: PageTimingMode = .smart {
+        didSet { save() }
+    }
+    
+    /// Akıllı modda yazıcı "Hazır" olduktan sonra ek bekleme
+    @Published var extraWaitSeconds: Int = 2 {
+        didSet { save() }
+    }
+    
     @Published var duplexEnabled: Bool = false {
         didSet { save() }
     }
@@ -69,6 +79,8 @@ class SettingsStore: ObservableObject {
         static let selectedPrinter = "selectedPrinter"
         static let printDelaySeconds = "printDelaySeconds"
         static let cleanDelaySeconds = "cleanDelaySeconds"
+        static let pageTimingMode = "pageTimingMode"
+        static let extraWaitSeconds = "extraWaitSeconds"
         static let duplexEnabled = "duplexEnabled"
         static let grayscaleMode = "grayscaleMode"
         static let driverMode = "driverMode"
@@ -98,6 +110,9 @@ class SettingsStore: ObservableObject {
         let savedCleanDelay = defaults.integer(forKey: Keys.cleanDelaySeconds)
         cleanDelaySeconds = savedCleanDelay > 0 ? savedCleanDelay : 8
         
+        pageTimingMode = defaults.string(forKey: Keys.pageTimingMode).flatMap(PageTimingMode.init(rawValue:)) ?? .smart
+        extraWaitSeconds = defaults.object(forKey: Keys.extraWaitSeconds) as? Int ?? 2
+        
         duplexEnabled = defaults.bool(forKey: Keys.duplexEnabled)
         grayscaleMode = defaults.bool(forKey: Keys.grayscaleMode)
         
@@ -114,6 +129,8 @@ class SettingsStore: ObservableObject {
         defaults.set(selectedPrinter, forKey: Keys.selectedPrinter)
         defaults.set(printDelaySeconds, forKey: Keys.printDelaySeconds)
         defaults.set(cleanDelaySeconds, forKey: Keys.cleanDelaySeconds)
+        defaults.set(pageTimingMode.rawValue, forKey: Keys.pageTimingMode)
+        defaults.set(extraWaitSeconds, forKey: Keys.extraWaitSeconds)
         defaults.set(duplexEnabled, forKey: Keys.duplexEnabled)
         defaults.set(grayscaleMode, forKey: Keys.grayscaleMode)
         defaults.set(driverMode.rawValue, forKey: Keys.driverMode)
@@ -121,6 +138,25 @@ class SettingsStore: ObservableObject {
         defaults.set(ghostscriptPath, forKey: Keys.ghostscriptPath)
         defaults.set(foo2qpdlPath, forKey: Keys.foo2qpdlPath)
         defaults.set(rawQueueName, forKey: Keys.rawQueueName)
+    }
+}
+
+// MARK: - Page Timing
+
+/// Sayfalar arasında ne kadar beklenir
+enum PageTimingMode: String, CaseIterable, Identifiable {
+    /// Yazıcı sayfayı basıp kayışı temizledikten sonra "Hazır" olunca
+    case smart
+    /// Kullanıcının verdiği sabit yazdırma + temizlik süresi (yedek)
+    case fixed
+    
+    var id: String { rawValue }
+    
+    var title: String {
+        switch self {
+        case .smart: return "Akıllı"
+        case .fixed: return "Sabit süre"
+        }
     }
 }
 

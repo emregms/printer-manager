@@ -32,11 +32,30 @@ struct PrinterStatus: Equatable {
     let firmware: String?
     let date: Date
     
-    /// Yazdırmayı fiilen durduran hatalar. Atık toner kabı dolu uyarısında bu
-    /// yazıcı basmaya devam ediyor (2026-11-07'de 44 sayfa basıldı).
+    /// Yazıcı hata bildiriyor: yeni sayfa gönderilmez (kuyruk şişmesin)
     var blocksPrinting: Bool {
-        guard severity == .error, let key = key else { return false }
-        return !["WasteTankFull", "UsbCableOff", "NetworkCableOff"].contains(key)
+        severity == .error
+    }
+    
+    // Bir sayfanın gözlenen akışı (renkli A4, 2026-11-07):
+    //   01 01 01 IDLE  → 09 01 01 (iş alındı) → 09 01 04 (yazdırıyor), BUSY
+    //   → ~37 sn: 01 01 04 (veri bitti, makine çalışıyor) → ~40 sn: 01 01 01 IDLE
+    // Yazıcı "Hazır"a ancak sayfayı basıp kayışı temizledikten sonra döner.
+    
+    /// Bayt 0'daki 0x08: yazıcıda işlenen bir iş var
+    var hasJob: Bool {
+        code[0] & 0x08 != 0
+    }
+    
+    /// Hazır ya da güç tasarrufunda, iş yok, hata yok: sonraki sayfa gönderilebilir
+    var isIdle: Bool {
+        !blocksPrinting && !hasJob && code[1] == 0x01 && (code[2] == 0x01 || code[2] == 0x03)
+            && deviceState != "BUSY"
+    }
+    
+    /// Isınıyor, yazdırıyor ya da meşgul: sayfa üzerinde çalışıyor
+    var isWorking: Bool {
+        hasJob || deviceState == "BUSY" || (code[1] == 0x01 && [0x04, 0x05, 0x08].contains(code[2]))
     }
     
     var codeText: String {
@@ -127,11 +146,14 @@ enum PrinterStatusReader {
     
     static func decode(code: [UInt8], deviceID: String?, port: UInt8?, table: StatusTable?) -> PrinterStatus {
         let entry = table?.match(code)
+        // Bayt 0 bit alanı: 0x04 hata, 0x02 uyarı, 0x01 normal, 0x08 iş var
         let severity: PrinterStatus.Severity
-        switch code[0] {
-        case 0x04: severity = .error
-        case 0x02: severity = .warning
-        default: severity = .ok
+        if code[0] & 0x04 != 0 {
+            severity = .error
+        } else if code[0] & 0x02 != 0 {
+            severity = .warning
+        } else {
+            severity = .ok
         }
         
         let text = entry.flatMap { StatusText.turkish[$0.name] }
@@ -350,7 +372,8 @@ enum StatusText {
         add("WasteTankFull", "Atık toner kabı dolu", """
             Atık toner kabını (\(wasteTonerPart)) değiştirin. Kap doluyken kayıştan \
             temizlenen toner atılamaz; baskılardaki lekelerin ve sayfa arası bekleme \
-            ihtiyacının nedeni bu olabilir.
+            ihtiyacının nedeni bu olabilir. Uyarı, kapak açılıp kapatılınca geçici \
+            olarak kalkabilir.
             """)
         add("ITBError", "Transfer kayışı hatası", "Kayışın doğru takıldığından emin olun; sürerse servis gerekir.")
         add("OPCEmpty", "Görüntüleme ünitesi takılı değil", "Görüntüleme ünitesini (\(imagingUnitPart)) takın.")
