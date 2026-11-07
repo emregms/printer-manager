@@ -36,6 +36,7 @@ xattr -cr /Applications/PrinterManager.app
 ## Features
 
 - **Own Driver (Samsung CLP-300)**: Instead of the old Samsung driver in macOS, the app prepares each page itself (Ghostscript + foo2qpdl) and sends it to the printer raw. Dense, colour and vector-heavy pages print reliably
+- **Printer Status and Toner**: The status the printer reports over USB (paper jam, cover open, toner low, waste toner full…) with an explanation, plus each toner's level and cartridge number
 - **Adjustable Delays**: Print and cleaning delays with sliders
 - **Page-by-Page Printing**: Each page sent separately to printer
 - **Manual Duplex**: Odd pages → Flip → Even pages reversed
@@ -115,6 +116,20 @@ The parameters are taken verbatim from the `foo2qpdl-wrapper` script of the foo2
 
 Advanced settings (⌘, or the button next to the Driver heading): Ghostscript and foo2qpdl paths, raw queue name. Left empty, they are found automatically.
 
+## Printer Status and Toner
+
+The card at the top of the window reads the printer's own status every 10 seconds:
+
+- **Status:** ready, printing, power save, paper jam (tray / inside / exit), no paper, cover open, toner low / empty / not installed, waste toner full, transfer belt / fuser / imaging unit end of life, and hardware errors. Each comes with an explanation and what to do (in Turkish).
+- **Toner:** each toner's level and cartridge number (CLP-C300A, CLP-M300A, CLP-Y300A, CLP-K300A). 10% or less is marked "Az" (low).
+- **Details:** raw status code, the printer's own (English) message, USB state and the printer firmware version.
+
+When a print starts, the status and any low toner go to the log. If there is a problem that stops printing (paper jam, cover open, no paper), the app asks first, and while printing it waits before each page until the problem is fixed.
+
+The status is read with read-only USB control requests: nothing is sent to the printer and CUPS is not disturbed while printing. The codes are decoded with the printer's own status table (SM.xml). The method was taken, for interoperability, from the status monitor in Samsung's Mac driver.
+
+Toner cannot be reset: the chip in each cartridge keeps its own level.
+
 ## Troubleshooting
 
 The app's messages are in Turkish; the English meaning is given here.
@@ -145,7 +160,8 @@ open PrinterManager.xcodeproj
 During the build, two helper programs are compiled and placed in the app bundle (`Contents/Helpers/`):
 
 - `foo2qpdl`: from the source in `ThirdParty/foo2qpdl`.
-- `cups-jobs`: from `Driver/cups-jobs.c`. It lists held jobs, fetches their documents and deletes the job.
+- `cups-jobs`: from `Driver/cups-jobs.c`. It lists jobs sent to the queue, fetches their documents and deletes the job.
+- `clp300-status`: from `Driver/clp300-status.c`. It reads the printer's status, toner levels and status table over USB.
 
 The printer queue's files (`pminbox` filter, PPD, `install-driver.sh`) are in `Driver/`.
 

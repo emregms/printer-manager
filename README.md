@@ -36,6 +36,7 @@ xattr -cr /Applications/PrinterManager.app
 ## Özellikler
 
 - **Kendi Sürücü (Samsung CLP-300)**: macOS'taki eski Samsung sürücüsü yerine sayfaları uygulama kendisi hazırlar (Ghostscript + foo2qpdl) ve yazıcıya ham olarak gönderir. Yoğun, renkli ve vektör ağırlıklı sayfalar da sorunsuz basılır
+- **Yazıcı Durumu ve Toner**: Yazıcının USB'den bildirdiği durum (kağıt sıkışması, kapak açık, toner az, atık toner kabı dolu…) Türkçe açıklamasıyla, dört tonerin yüzdesi ve kartuş numaralarıyla
 - **Ayarlanabilir Bekleme Süreleri**: Yazdırma ve temizlik süreleri slider ile ayarlanır
 - **Sayfa Sayfa Yazdırma**: Her sayfa ayrı ayrı yazıcıya gönderilir
 - **Çift Yönlü Yazdırma**: Tek → Çevir → Çift sayfalar ters sırada
@@ -115,6 +116,20 @@ Parametreler, Linux'ta yıllardır CLP-300 için kullanılan foo2zjs projesinin 
 
 Gelişmiş ayarlar (⌘, ya da Sürücü başlığının yanındaki düğme): Ghostscript ve foo2qpdl yolları, ham gönderim kuyruğu. Boş bırakılırsa otomatik bulunur.
 
+## Yazıcı Durumu ve Toner
+
+Pencerenin üstündeki kart, yazıcının kendi bildirdiği durumu 10 saniyede bir okur:
+
+- **Durum:** Hazır, yazdırıyor, güç tasarrufu, kağıt sıkışması (tepsi / iç / çıkış), kağıt yok, kapak açık, toner az / bitti / takılı değil, atık toner kabı dolu, transfer kayışı / ısıtıcı / görüntüleme ünitesi ömrü ve donanım hataları. Her biri Türkçe açıklaması ve ne yapılacağıyla gösterilir.
+- **Toner:** Dört tonerin yüzdesi ve kartuş numarası (CLP-C300A, CLP-M300A, CLP-Y300A, CLP-K300A). %10 ve altı "Az" olarak işaretlenir.
+- **Ayrıntılar:** Ham durum kodu, yazıcının İngilizce mesajı, USB durumu ve yazıcının ürün yazılımı sürümü.
+
+Yazdırma başlarken durum ve azalan tonerler günlüğe yazılır. Kağıt sıkışması, kapak açık ya da kağıt yok gibi baskıyı durduran bir sorun varsa sorulur; baskı sürerken her sayfadan önce sorunun düzelmesi beklenir.
+
+Durum, yazıcıdan yalnızca okuma yapan USB kontrol istekleriyle alınır. Yazıcıya veri gönderilmez ve yazdırma sürerken CUPS'a karışılmaz. Kodların anlamı yazıcının kendi durum tablosundan (SM.xml) okunur. Bu yöntem, Samsung'un Mac sürücüsündeki durum izleyicisinden birlikte çalışabilirlik için çıkarıldı.
+
+Toner sıfırlama yapılamaz: kartuşlardaki çip seviyeyi kendisi tutar.
+
 ## Sorun Giderme
 
 | Durum | Ne yapmalı |
@@ -143,7 +158,8 @@ open PrinterManager.xcodeproj
 Derleme sırasında iki yardımcı program otomatik derlenip uygulama paketine (`Contents/Helpers/`) konur:
 
 - `foo2qpdl`: `ThirdParty/foo2qpdl` klasöründeki kaynaktan.
-- `cups-jobs`: `Driver/cups-jobs.c`'den. Bekletilen işleri listeler, belgelerini alır ve işi siler.
+- `cups-jobs`: `Driver/cups-jobs.c`'den. Kuyruğa gelen işleri listeler, belgelerini alır ve işi siler.
+- `clp300-status`: `Driver/clp300-status.c`'den. Yazıcının durumunu, tonerlerini ve durum tablosunu USB'den okur.
 
 Yazıcı kuyruğunun dosyaları (`pminbox` filtresi, PPD, `install-driver.sh`) `Driver/` klasöründedir.
 
