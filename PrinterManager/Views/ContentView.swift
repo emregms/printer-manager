@@ -22,6 +22,8 @@ struct ContentView: View {
                 // Yazdırma Günlüğü
                 LogView()
             }
+            // Gizli başlık çubuğu: pencere düğmeleri (kırmızı/sarı/yeşil) içeriğin üstüne binmesin
+            .padding(.top, 28)
             .frame(width: 340)
             .background(Color(NSColor.windowBackgroundColor))
             
