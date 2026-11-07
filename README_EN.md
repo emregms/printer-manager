@@ -41,6 +41,7 @@ xattr -cr /Applications/PrinterManager.app
 - **Print Queue and Double Feeds**: See what is printing now and what comes next; on a double feed, reprint the same page with one click, or reprint spoiled sheets duplex after the series
 - **Fuser and Sleep**: See whether the printer is hot or asleep, and set how many idle minutes before it sleeps
 - **Drag and Drop**: Drag a PDF from Finder onto the window to open it
+- **Photo Mode**: Photos are printed with the colour table and halftone screens Samsung made for the CLP-300; open shadows, natural colours
 - **Page-by-Page Printing**: Each page sent separately to printer
 - **Manual Duplex**: Odd pages → Flip → Even pages reversed
 - **PDF Preview**: Thumbnail grid for all pages
@@ -131,6 +132,18 @@ The printer sometimes pulls two sheets at once:
 - **Geri Al** (undo) reverts the last intervention until the next page starts. You are asked before reprints start and can skip them.
 
 In smart mode each page is sent once the printer has printed the previous one, cleaned the belt and is Ready again. A cold printer takes longer for the first page; the remaining time is estimated from the recent pages.
+
+## Photo Mode
+
+In the standard colour path, Ghostscript converts with a generic CMYK profile and turns cyan + magenta + yellow on the same dot into black. That is fine for text, but in photos shadows turn grey and blotchy. With **Fotoğraf Modu** (photo mode) on in the left panel:
+
+- Ghostscript renders the page in continuous tone (RGB or grey).
+- The `clp300-raster` helper runs each pixel through Samsung's CLP-300 colour table (17×17×17 RGB → CMYK) and turns each colour into dots with Samsung's halftone screen for that resolution. The screens account for the printer's dot gain; mid greys are made from CMY, black only joins in dark tones.
+- foo2qpdl encodes the result for the printer as usual.
+
+These files are installed with Samsung's Mac driver in `/Library/Printers/Samsung/CLP-300`. They are not in the repo or the app; they are read in place at run time. If the Samsung driver isn't installed, the switch stays off and says why.
+
+For photos, **1200x600 dpi** is recommended: a full-page A4 photo is ~6.7 MB. At 1200x1200 it is ~13 MB and you are asked before it is sent.
 
 ## Printer Status and Toner
 

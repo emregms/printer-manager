@@ -41,6 +41,7 @@ xattr -cr /Applications/PrinterManager.app
 - **Baskı Sırası ve Çift Kağıt**: Şu an basılan ve sıradaki sayfalar listede görünür; çift kağıt çekince tek tıkla aynı sayfa tekrar basılır ya da bozulan kağıtlar seri bitince çift yönlü yeniden basılır
 - **Fırın ve Uyku**: Yazıcının sıcak mı uykuda mı olduğu görünür; boşta kaç dakikada uyuyacağı yazıcıya ayarlanır
 - **Sürükle-Bırak**: PDF'yi Finder'dan pencereye sürükleyerek açın
+- **Fotoğraf Modu**: Fotoğraflar Samsung'un CLP-300 için ayarladığı renk tablosu ve yarım ton desenleriyle basılır; gölgeler açık, renkler doğal çıkar
 - **Sayfa Sayfa Yazdırma**: Her sayfa ayrı ayrı yazıcıya gönderilir
 - **Çift Yönlü Yazdırma**: Tek → Çevir → Çift sayfalar ters sırada
 - **PDF Önizleme**: Thumbnail grid ile tüm sayfaları görüntüle
@@ -131,6 +132,18 @@ Yazıcı bazen iki kağıdı birden çeker:
 - Son müdahale, sonraki sayfa başlayana kadar **Geri Al** ile geri alınır. Yeniden basım başlamadan önce sorulur; istenirse atlanır.
 
 Akıllı modda her sayfa, yazıcı bir öncekini basıp kayışı temizleyip yeniden "Hazır" olunca gönderilir. Soğuk yazıcıda ilk sayfa uzun, ısınınca kısa sürer; kalan süre son sayfaların ortalamasından tahmin edilir.
+
+## Fotoğraf Modu
+
+Standart renkli yolda Ghostscript genel bir CMYK profiliyle çevirir ve aynı noktaya düşen camgöbeği + macenta + sarıyı siyaha çevirir. Yazı için iyi, fotoğrafta gölgeler griye ve lekeye döner. Sol paneldeki **Fotoğraf Modu** açıkken:
+
+- Ghostscript sayfayı sürekli tonlu (RGB ya da gri) verir.
+- `clp300-raster` yardımcı aracı her pikseli Samsung'un CLP-300 renk tablosundan (17×17×17 RGB → CMYK) geçirir ve her rengi Samsung'un o çözünürlük için hazırladığı yarım ton deseniyle noktalara çevirir. Desenler yazıcının nokta kazancını hesaba katar; orta griler CMY ile, siyah yalnız koyu tonlarda kullanılır.
+- foo2qpdl her zamanki gibi yazıcı diline çevirir.
+
+Bu dosyalar Samsung'un Mac sürücüsüyle `/Library/Printers/Samsung/CLP-300` klasörüne kurulur; repoda ve uygulamada yoktur, çalışırken yerinden okunur. Samsung sürücüsü kurulu değilse anahtar kapalı kalır ve nedeni yazılır.
+
+Fotoğraf için **1200x600 dpi** önerilir: A4 tam sayfa fotoğraf ~6,7 MB. 1200x1200'de ~13 MB olur ve gönderilmeden önce sorulur.
 
 ## Yazıcı Durumu ve Toner
 
