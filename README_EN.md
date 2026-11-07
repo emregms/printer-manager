@@ -38,7 +38,7 @@ Samsung's old driver is **not needed**. It takes 5–10 minutes, once.
    - **2. Printer and Driver:** **Sürücüyü Kur ve Yazıcıyı Ekle** (install driver and add printer) → your Mac password. The printer appears in Printers & Scanners as "Samsung CLP-300".
    - **3. Optional:** add "PrinterManager ile Yazdır" to the PDF menu of the print dialog; turn on "open at login".
    - **4. iPhone and iPad (optional):** **Yazıcıyı yerel ağda paylaş** (share the printer on the local network) → your Mac password ([details](#printing-from-iphone-and-ipad)).
-   - **5. Photo Mode:** can be turned on if Samsung's colour files are found ([details](#photo-mode)).
+   - **5. Photo Mode:** nothing to install; shows which colour data is in use ([details](#photo-mode)).
 4. **Done.** Drag a PDF onto the window and click **Yazdır** (Print).
 
 <p align="center">
@@ -67,7 +67,7 @@ Then in PrinterManager: **Settings (⌘,) → macOS Sürücüsü (macOS driver) 
 - **Own driver:** Ghostscript + foo2qpdl prepare each page and it goes to the printer raw. Dense, colour and vector-heavy pages print reliably.
 - **Smart page pacing:** The next page is sent once the printer has printed the page and cleaned the belt. No fixed delay; a cold printer takes longer for the first page, a warm one less.
 - **Stops on errors:** On a paper jam, open cover, no paper and so on, sending stops and the queue doesn't fill up; it continues where it stopped once fixed.
-- **Photo mode:** Photos are printed with the colour table and halftone screens Samsung made for the CLP-300; open shadows, natural colours.
+- **Photo mode:** Photos are printed with the app's own colour table and halftone screens computed for the CLP-300; if Samsung's old driver is installed, its files are used instead.
 - **Manual duplex:** odd pages first, flip the paper, even pages in reverse order.
 - **Grayscale**, three qualities (600, 1200x600, 1200x1200 dpi).
 
@@ -167,17 +167,21 @@ In smart mode each page is sent once the printer has printed the previous one, c
 In the standard colour path, Ghostscript converts with a generic CMYK profile and turns cyan + magenta + yellow on the same dot into black. That is fine for text, but in photos shadows turn grey and blotchy. With **Fotoğraf Modu** (photo mode) on in the left panel:
 
 - Ghostscript renders the page in continuous tone (RGB or grey).
-- The `clp300-raster` helper runs each pixel through Samsung's CLP-300 colour table (17×17×17 RGB → CMYK) and turns each colour into dots with Samsung's halftone screen for that resolution. The screens account for the printer's dot gain; mid greys are made from CMY, black only joins in dark tones.
+- The `clp300-raster` helper runs each pixel through a CLP-300 colour table (17×17×17 RGB → CMYK) and turns each colour into dots with a halftone screen made for that resolution. The screens account for the printer's dot gain; mid greys are made from CMY, black only joins in dark tones.
 - foo2qpdl encodes the result for the printer as usual.
 
-**Colour files:** these come with Samsung's old CLP-300 Mac driver. They are **not** in the repo or the app; they are read in place at run time. The app looks in two places:
+**The colour data can come from two sources.** The Setup Assistant, and the caption under the switch while Photo Mode is on, say which one is in use.
 
-- `/Library/Printers/Samsung/CLP-300` (where Samsung's driver installs them)
-- `~/Library/Application Support/PrinterManager/CLP-300` (no admin rights needed)
+1. **PrinterManager's own data** comes inside the app, so it is ready on every Mac and needs none of Samsung's files. It is computed from scratch by `Scripts/make-colour-tables.py`: nothing is copied from Samsung's data, and Samsung's data is not used as input. It ships under the app's license (MIT).
+   - **Colour table:** solved from a printer model (Neugebauer) of typical colour laser toners. Gamut mapping is done in Oklab: pure sRGB colours go to solid toner, low-chroma colours such as greys, skin and sky barely move, and colours the printer can't reach are clipped keeping their hue. Low GCR: mid greys from C+M+Y, black only in dark tones. Total toner is limited to 240%. Prints a little lighter than the screen (mid grey ~12 L* lighter); saturated colours are not lightened.
+   - **Halftone:** clustered dots, ~95 lpi; C 18.4°, M 71.6°, Y 0°, K 45°. At 1200x600 the pixels are not square, so the dots are computed round in physical space. Dot gain is built into the thresholds: the CLP-300's toner spreads a lot, so 50% input gives only ~16% coverage.
+2. **Samsung's colour files** come with Samsung's old CLP-300 Mac driver. They are **not** in the repo or the app. If present, they are read in place and take priority.
 
-HP no longer offers a macOS driver for this printer. If you have a Mac with Samsung's driver installed, put its `CLP-300` folder in the second place on the new Mac. Without the files everything works; only Photo Mode stays off and says why.
+Search order: `/Library/Printers/Samsung/CLP-300` (where Samsung's driver installs them) → `~/Library/Application Support/PrinterManager/CLP-300` (no admin rights needed) → inside the app. If you have a Mac with Samsung's driver installed, you can put its `CLP-300` folder in the second place on the new Mac; HP no longer offers a macOS driver for this printer.
 
-For photos, **1200x600 dpi** is recommended: a full-page A4 photo is ~6.7 MB. At 1200x1200 it is ~13 MB and you are asked before it is sent.
+Our own data was first tested on the computer (`Scripts/simulate-photo-mode.py`: grey balance, tone ramps, page size), then tuned on the CLP-300 with three A4 test sheets. The first guess (40% coverage looking like 50% on paper) printed far too dark; dot gain was set to `--gain-at-40 0.86` and lightness to `--lighten 12`. If another CLP-300 or toner prints darker or lighter, the data is regenerated with these two values.
+
+For photos, **1200x600 dpi** is recommended: a full-page A4 photo is at most ~8 MB. At 1200x1200 it is ~12–13 MB and you are asked before it is sent.
 
 ## Printer Status and Toner
 
@@ -219,7 +223,7 @@ The app's messages are in Turkish; the English meaning is given here.
 | Print queue shows "PrinterManager açık değil" (not open) | Open PrinterManager; within a few seconds it takes the stopped job and opens the document. |
 | iPhone says "No AirPrint Printers Found" | Is PrinterManager running (printer icon in the menu bar)? Is "Yazıcıyı yerel ağda paylaş" on in Settings? Are the iPhone and the Mac on the same Wi-Fi? In System Settings → Privacy & Security → Local Network, PrinterManager must be on. |
 | The job is stuck at "printing" on the iPhone | PrinterManager was not running or could not take the document. Open PrinterManager; the waiting job is taken within seconds, the document opens and the job disappears from the iPhone. |
-| Photo Mode can't be turned on | Samsung's colour files weren't found; see [Photo Mode](#photo-mode). |
+| Photo Mode can't be turned on | The driver mode must be "Kendi sürücü" (own driver). If it says the colour files weren't found, the app bundle is incomplete: download and install PrinterManager again. Details: [Photo Mode](#photo-mode). |
 | Power-save time did not change | It takes effect when the printer starts: turn it off and on. In Settings, the "Şu an" (current) line should show the new time. |
 | Need details | The print log shows each page's size, time and any Ghostscript warnings. |
 
@@ -245,9 +249,11 @@ The build compiles the helpers and puts them in the app bundle (`Contents/Helper
 - `foo2qpdl`: from the source in `ThirdParty/foo2qpdl`.
 - `cups-jobs`: from `Driver/cups-jobs.c`. Lists jobs that arrive in the queue, fetches their documents and deletes the job.
 - `clp300-status`: from `Driver/clp300-status.c`. Reads the printer's status, toners and status table over USB; sets power save with PJL.
-- `clp300-raster`: from `Driver/clp300-raster.c`. In photo mode, turns the raster into dots with Samsung's colour table.
+- `clp300-raster`: from `Driver/clp300-raster.c`. In photo mode, turns the raster into dots with a colour table and halftone screens.
 
 The printer queue's files (`pminbox` filter, PPD, `install-driver.sh`) are in `Driver/`.
+
+Photo mode's own colour data is in `PrinterManager/Resources/ColorTables/CLP-300` and is copied into the bundle's `Contents/Resources`. `python3 Scripts/make-colour-tables.py` regenerates it (needs numpy, ~1 minute, the same files every time). `Scripts/simulate-photo-mode.py` compares data sets without printing and prepares a side-by-side A4 test page (raw QPDL).
 
 Scripts:
 

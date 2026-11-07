@@ -32,6 +32,7 @@
 		023 /* ScreenshotMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128; };
 		024 /* AppWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129; };
 		025 /* AirPrintAdvertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 130; };
+		026 /* ColorTables in Resources */ = {isa = PBXBuildFile; fileRef = 132; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,6 +68,7 @@
 		129 /* AppWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppWindow.swift; sourceTree = "<group>"; };
 		130 /* AirPrintAdvertiser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPrintAdvertiser.swift; sourceTree = "<group>"; };
 		131 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		132 /* ColorTables */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ColorTables; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -178,6 +180,7 @@
 			isa = PBXGroup;
 			children = (
 				110 /* Assets.xcassets */,
+				132 /* ColorTables */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -247,6 +250,7 @@
 				014 /* pminbox in Resources */,
 				015 /* Samsung-CLP-300-PrinterManager.ppd in Resources */,
 				016 /* install-driver.sh in Resources */,
+				026 /* ColorTables in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

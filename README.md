@@ -36,7 +36,7 @@ Samsung'un eski sürücüsü **gerekmez**. Toplam 5–10 dakika sürer, bir kez 
    - **2. Yazıcı ve Sürücü:** **Sürücüyü Kur ve Yazıcıyı Ekle** → Mac şifreniz. Yazıcı, Yazıcılar ve Tarayıcılar'a "Samsung CLP-300" olarak eklenir.
    - **3. İsteğe bağlı:** Yazdırma penceresinin PDF menüsüne "PrinterManager ile Yazdır"ı ekleyin; "Oturum açılınca başlat"ı açın.
    - **4. iPhone ve iPad (isteğe bağlı):** **Yazıcıyı yerel ağda paylaş** → Mac şifreniz ([ayrıntı](#iphone-ve-ipadden-yazdırma)).
-   - **5. Fotoğraf Modu:** Samsung'un renk dosyaları bulunursa açılabilir ([ayrıntı](#fotoğraf-modu)).
+   - **5. Fotoğraf Modu:** Ek kurulum gerekmez; hangi renk verisinin kullanıldığını gösterir ([ayrıntı](#fotoğraf-modu)).
 4. **Bitti.** Bir PDF'i pencereye sürükleyip **Yazdır**'a basın.
 
 <p align="center">
@@ -65,7 +65,7 @@ Sonra PrinterManager'da **Ayarlar (⌘,) → macOS Sürücüsü → Sürücüyü
 - **Kendi sürücü:** Sayfaları Ghostscript + foo2qpdl hazırlar ve yazıcıya ham olarak gider. Yoğun, renkli ve vektör ağırlıklı sayfalar da sorunsuz basılır.
 - **Akıllı sayfa geçişi:** Yazıcı sayfayı basıp kayışı temizleyince sıradaki sayfa gönderilir. Sabit bekleme gerekmez; soğuk yazıcıda ilk sayfa uzun, ısınınca kısa sürer.
 - **Hata olunca durur:** Kağıt sıkışması, kapak açık, kağıt yok gibi bir hatada gönderim durur, kuyruk şişmez; sorun giderilince kaldığı yerden sürer.
-- **Fotoğraf modu:** Fotoğraflar Samsung'un CLP-300 için ayarladığı renk tablosu ve yarım ton desenleriyle basılır; gölgeler açık, renkler doğal çıkar.
+- **Fotoğraf modu:** Fotoğraflar CLP-300 için hesaplanmış kendi renk tablosu ve yarım ton desenleriyle basılır; Samsung'un eski sürücüsü kuruluysa onun dosyaları kullanılır.
 - **Elle çift yön:** Önce tek sayfalar, sonra kağıtları çevirin, çift sayfalar ters sırada.
 - **Siyah beyaz**, üç kalite (600, 1200x600, 1200x1200 dpi).
 
@@ -165,17 +165,21 @@ Akıllı modda her sayfa, yazıcı bir öncekini basıp kayışı temizleyip yen
 Standart renkli yolda Ghostscript genel bir CMYK profiliyle çevirir ve aynı noktaya düşen camgöbeği + macenta + sarıyı siyaha çevirir. Yazı için iyi, fotoğrafta gölgeler griye ve lekeye döner. Sol paneldeki **Fotoğraf Modu** açıkken:
 
 - Ghostscript sayfayı sürekli tonlu (RGB ya da gri) verir.
-- `clp300-raster` yardımcı aracı her pikseli Samsung'un CLP-300 renk tablosundan (17×17×17 RGB → CMYK) geçirir ve her rengi Samsung'un o çözünürlük için hazırladığı yarım ton deseniyle noktalara çevirir. Desenler yazıcının nokta kazancını hesaba katar; orta griler CMY ile, siyah yalnız koyu tonlarda kullanılır.
+- `clp300-raster` yardımcı aracı her pikseli bir CLP-300 renk tablosundan (17×17×17 RGB → CMYK) geçirir ve her rengi o çözünürlük için hazırlanmış yarım ton deseniyle noktalara çevirir. Desenler yazıcının nokta kazancını hesaba katar; orta griler CMY ile, siyah yalnız koyu tonlarda kullanılır.
 - foo2qpdl her zamanki gibi yazıcı diline çevirir.
 
-**Renk dosyaları:** Bu dosyalar Samsung'un eski CLP-300 Mac sürücüsüyle gelir; repoda ve uygulamada **yoktur**, çalışırken yerinden okunur. Uygulama iki yere bakar:
+**Renk verisi iki kaynaktan gelebilir.** Hangisinin kullanıldığı Kurulum Yardımcısı'nda ve Fotoğraf Modu açıkken düğmenin altında yazar.
 
-- `/Library/Printers/Samsung/CLP-300` (Samsung sürücüsünün kurduğu yer)
-- `~/Library/Application Support/PrinterManager/CLP-300` (yönetici izni gerekmez)
+1. **PrinterManager'ın kendi verisi**, uygulamanın içinde gelir; her Mac'te hazırdır, Samsung'un hiçbir dosyası gerekmez. `Scripts/make-colour-tables.py` ile baştan hesaplanır: Samsung'un verisinden kopyalanmaz, girdi olarak da kullanılmaz. Uygulamanın lisansıyla (MIT) gelir.
+   - **Renk tablosu:** Tipik renkli lazer tonerleri için bir yazıcı modelinden (Neugebauer) çözülür. Gamut eşleme Oklab'dadır: saf sRGB renkleri tam tonere gider, gri, ten ve gökyüzü gibi az doygun renkler neredeyse değişmez, yazıcının basamadığı renkler ton açısı korunarak kırpılır. Düşük GCR: orta griler C+M+Y ile, siyah yalnız koyu tonlarda. Toplam toner %240 ile sınırlı. Kağıtta ekrandakinden biraz açık basar (orta gri ~12 L* açık); doygun renkler açılmaz.
+   - **Yarım ton:** Kümelenmiş nokta, ~95 lpi; C 18,4°, M 71,6°, Y 0°, K 45°. 1200x600'de pikseller dikdörtgen olduğundan noktalar fiziksel olarak yuvarlak hesaplanır. Nokta kazancı eşiklere işlenmiştir: CLP-300'de toner çok yayıldığından %50 giriş yalnızca ~%16 kaplama verir.
+2. **Samsung'un renk dosyaları**, Samsung'un eski CLP-300 Mac sürücüsüyle gelir; repoda ve uygulamada **yoktur**. Varsa yerinden okunur ve önceliklidir.
 
-HP artık bu yazıcı için macOS sürücüsü sunmuyor. Samsung sürücüsü kurulu bir Mac'iniz varsa `CLP-300` klasörünü yeni Mac'te ikinci yere koymanız yeterli. Dosyalar bulunamazsa her şey çalışır; yalnızca Fotoğraf Modu kapalı kalır ve nedeni yazılır.
+Arama sırası: `/Library/Printers/Samsung/CLP-300` (Samsung sürücüsünün kurduğu yer) → `~/Library/Application Support/PrinterManager/CLP-300` (yönetici izni gerekmez) → uygulamanın içi. Samsung sürücüsü kurulu bir Mac'iniz varsa `CLP-300` klasörünü yeni Mac'te ikinci yere koyabilirsiniz; HP artık bu yazıcı için macOS sürücüsü sunmuyor.
 
-Fotoğraf için **1200x600 dpi** önerilir: A4 tam sayfa fotoğraf ~6,7 MB. 1200x1200'de ~13 MB olur ve gönderilmeden önce sorulur.
+Kendi verimiz önce bilgisayarda (`Scripts/simulate-photo-mode.py`: gri dengesi, ton rampaları, sayfa boyutu), sonra CLP-300'de üç A4 deneme sayfasıyla ayarlandı. İlk tahmin (%40 kaplama kağıtta %50) çok koyu bastı; nokta kazancı `--gain-at-40 0.86`, açıklık `--lighten 12` olarak seçildi. Başka bir CLP-300'de ya da tonerde koyu veya açık basarsa veri bu iki değerle yeniden üretilir.
+
+Fotoğraf için **1200x600 dpi** önerilir: A4 tam sayfa fotoğraf en çok ~8 MB. 1200x1200'de ~12–13 MB olur ve gönderilmeden önce sorulur.
 
 ## Yazıcı Durumu ve Toner
 
@@ -215,7 +219,7 @@ Ayar, yazıcının USB arayüzünden PJL komutlarıyla okunur ve yazılır. Yard
 | Yazdırma Sırası'nda "PrinterManager açık değil" | PrinterManager'ı açın; durdurulan iş birkaç saniye içinde alınır ve belge açılır. |
 | iPhone "AirPrint Yazıcı Bulunamadı" diyor | PrinterManager çalışıyor mu (menü çubuğunda yazıcı simgesi)? Ayarlar'da "Yazıcıyı yerel ağda paylaş" açık mı? iPhone ile Mac aynı Wi-Fi'de mi? Sistem Ayarları → Gizlilik ve Güvenlik → Yerel Ağ'da PrinterManager açık olmalı. |
 | iPhone'da iş "yazdırılıyor"da kaldı | Belge gelirken PrinterManager kapalıydı ya da alamadı. PrinterManager'ı açın; bekleyen iş birkaç saniye içinde alınır, belge açılır ve iş iPhone'dan silinir. |
-| Fotoğraf Modu açılmıyor | Samsung'un renk dosyaları bulunamadı; [Fotoğraf Modu](#fotoğraf-modu) bölümüne bakın. |
+| Fotoğraf Modu açılmıyor | Sürücü modu "Kendi sürücü" olmalı. "Renk dosyaları bulunamadı" yazıyorsa uygulama paketi eksiktir: PrinterManager'ı yeniden indirip kurun. Ayrıntı: [Fotoğraf Modu](#fotoğraf-modu). |
 | Güç tasarrufu süresi değişmedi | Ayar yazıcı açılırken geçerli olur: yazıcıyı kapatıp açın. Ayarlar'da "Şu an" satırı yeni süreyi göstermeli. |
 | Ayrıntı gerekiyor | Yazdırma Günlüğü her sayfanın boyutunu, süresini ve Ghostscript uyarılarını gösterir. |
 
@@ -241,9 +245,11 @@ Derleme sırasında yardımcı programlar otomatik derlenip uygulama paketine (`
 - `foo2qpdl`: `ThirdParty/foo2qpdl` klasöründeki kaynaktan.
 - `cups-jobs`: `Driver/cups-jobs.c`'den. Kuyruğa gelen işleri listeler, belgelerini alır ve işi siler.
 - `clp300-status`: `Driver/clp300-status.c`'den. Yazıcının durumunu, tonerlerini ve durum tablosunu USB'den okur; güç tasarrufunu PJL ile ayarlar.
-- `clp300-raster`: `Driver/clp300-raster.c`'den. Fotoğraf modunda Samsung'un renk tablosuyla rasteri noktalara çevirir.
+- `clp300-raster`: `Driver/clp300-raster.c`'den. Fotoğraf modunda renk tablosu ve yarım tonla rasteri noktalara çevirir.
 
 Yazıcı kuyruğunun dosyaları (`pminbox` filtresi, PPD, `install-driver.sh`) `Driver/` klasöründedir.
+
+Fotoğraf modunun kendi renk verisi `PrinterManager/Resources/ColorTables/CLP-300` klasöründedir ve paketin `Contents/Resources` klasörüne kopyalanır. `python3 Scripts/make-colour-tables.py` onu yeniden üretir (numpy gerekir, ~1 dakika, her seferinde aynı dosyalar). `Scripts/simulate-photo-mode.py` veri kümelerini yazıcıya göndermeden karşılaştırır ve yan yana bir A4 deneme sayfası (ham QPDL) hazırlar.
 
 Betikler:
 

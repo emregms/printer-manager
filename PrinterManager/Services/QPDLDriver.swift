@@ -8,8 +8,9 @@ import Foundation
 /// Wrapper'ın yarım ton (WTS) önsözü eklenmiyor: Ghostscript 10'da PDF girdide etkisiz.
 ///
 /// Fotoğraf modu (`tools.colorTables` varsa): gs sürekli tonlu raster (P6/P5) verir,
-/// `clp300-raster` Samsung'un renk tablosu ve yarım ton matrisleriyle noktalara çevirir,
-/// foo2qpdl `-A -B` olmadan kodlar. gs'nin kendi renk çevrimi ve yarım tonu kullanılmaz.
+/// `clp300-raster` bir renk tablosu ve yarım ton matrisleriyle (Samsung'unki ya da
+/// uygulamanınki, bkz. `PrinterColorTables`) noktalara çevirir, foo2qpdl `-A -B` olmadan
+/// kodlar. gs'nin kendi renk çevrimi ve yarım tonu kullanılmaz.
 struct QPDLDriver {
     let tools: QPDLTools
     
@@ -203,7 +204,7 @@ struct QPDLDriver {
         ]
         if color {
             // -A (C+M+Y aynı noktadaysa yalnız siyah) ve -B (siyahın altını boşalt) yazı
-            // için; fotoğrafta gölgeleri griye boğar. Samsung'un tablosu siyahı kendisi ayarlar.
+            // için; fotoğrafta gölgeleri griye boğar. Renk tablosu siyahı kendisi ayarlar.
             arguments += photo ? ["-c"] : ["-c", "-B", "-A"]
         }
         arguments += [
@@ -256,23 +257,56 @@ struct QPDLTools {
     var colorTables: PrinterColorTables?
 }
 
-/// Samsung'un Mac sürücüsünün kurduğu CLP-300 renk tablosu (RGB → CMYK) ve yarım ton
-/// matrisleri. Fotoğraf modu bunlarla basar. Dosyalar repoda ve uygulamada yoktur;
-/// Samsung sürücüsü kuruluysa yerinden okunur (bkz. Driver/clp300-raster.c).
+/// Fotoğraf modunun CLP-300 renk tablosu (RGB → CMYK) ve yarım ton matrisleri
+/// (biçim: Driver/clp300-raster.c). Sırayla aranır:
+///   1. Samsung'un Mac sürücüsünün kurduğu dosyalar (kuruluysa; repoda ve uygulamada yoktur)
+///   2. Kullanıcının koyabileceği klasör (yönetici izni gerekmez)
+///   3. Uygulamanın içindeki kendi verimiz: Scripts/make-colour-tables.py ile baştan üretilir
 struct PrinterColorTables {
-    /// Samsung sürücüsünün kurduğu yer; yoksa kullanıcının koyabileceği klasör (yönetici izni gerekmez)
-    static let searchDirectories = [
-        URL(fileURLWithPath: "/Library/Printers/Samsung/CLP-300"),
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("PrinterManager/CLP-300"),
+    enum Source {
+        case samsung, user, bundled
+        
+        var title: String {
+            switch self {
+            case .samsung: return "Samsung'un renk dosyaları"
+            case .user: return "Kullanıcı klasöründeki renk dosyaları"
+            case .bundled: return "PrinterManager'ın kendi renk tablosu"
+            }
+        }
+    }
+    
+    static let searchDirectories: [(source: Source, url: URL)] = [
+        (.samsung, URL(fileURLWithPath: "/Library/Printers/Samsung/CLP-300")),
+        (.user, FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("PrinterManager/CLP-300")),
+        (.bundled, Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/ColorTables/CLP-300")),
     ]
-    static var directory: URL { searchDirectories[0] }
     static var bundledHelper: URL {
         Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/clp300-raster")
     }
     
+    let source: Source
     let directory: URL
     let helper: URL
+    
+    /// "~/Library/..." biçiminde; uygulamanın içindeyse yalnızca "uygulamanın içinde"
+    var location: String {
+        source == .bundled
+            ? "uygulamanın içinde"
+            : directory.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+    }
+    
+    /// Ayarlardaki fotoğraf modu açıklaması için tek cümle
+    var summary: String {
+        switch source {
+        case .samsung:
+            return "Renkler Samsung'un CLP-300 için ayarladığı renk tablosu ve yarım ton desenleriyle çevrilir: gölgeler açılır, renkler doğal çıkar"
+        case .user:
+            return "Renkler \(location) klasöründeki renk tablosu ve yarım ton desenleriyle çevrilir"
+        case .bundled:
+            return "Renkler PrinterManager'ın kendi CLP-300 renk tablosu ve yarım ton desenleriyle çevrilir; Samsung'un dosyaları gerekmez"
+        }
+    }
     
     /// Üç çözünürlüğün dosyalarının hepsi bulunan ilk klasör (yardımcı araç da yerindeyse)
     static func find() -> PrinterColorTables? {
@@ -282,12 +316,12 @@ struct PrinterColorTables {
             files += ["600", "1200600", "12001200"].map { "\(color)HT_\($0)" }
         }
         guard fileManager.isExecutableFile(atPath: bundledHelper.path),
-              let directory = searchDirectories.first(where: { directory in
-                  files.allSatisfy { fileManager.isReadableFile(atPath: directory.appendingPathComponent($0).path) }
+              let found = searchDirectories.first(where: { candidate in
+                  files.allSatisfy { fileManager.isReadableFile(atPath: candidate.url.appendingPathComponent($0).path) }
               }) else {
             return nil
         }
-        return PrinterColorTables(directory: directory, helper: bundledHelper)
+        return PrinterColorTables(source: found.source, directory: found.url, helper: bundledHelper)
     }
 }
 

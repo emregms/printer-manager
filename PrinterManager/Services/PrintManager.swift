@@ -682,11 +682,12 @@ extension PrintManager {
         if settings.photoMode {
             colorTables = PrinterColorTables.find()
             if colorTables == nil {
-                addLog("⚠️ Fotoğraf modu: Samsung renk tabloları bulunamadı (\(PrinterColorTables.directory.path)); standart renkle basılıyor")
+                addLog("⚠️ Fotoğraf modu: renk dosyaları bulunamadı; standart renkle basılıyor")
             }
         }
         
-        addLog("Kalite: \(settings.resolution.title), \(isGrayscale ? "siyah-beyaz" : "renkli")\(colorTables != nil ? ", fotoğraf modu" : "")")
+        let photo = colorTables.map { ", fotoğraf modu (\($0.source.title))" } ?? ""
+        addLog("Kalite: \(settings.resolution.title), \(isGrayscale ? "siyah-beyaz" : "renkli")\(photo)")
         
         return OwnDriverJob(
             driver: QPDLDriver(tools: QPDLTools(ghostscript: ghostscript, foo2qpdl: foo2qpdl, colorTables: colorTables)),
