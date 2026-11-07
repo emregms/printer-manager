@@ -37,7 +37,8 @@ Samsung's old driver is **not needed**. It takes 5–10 minutes, once.
    - **1. Ghostscript:** One button. With Homebrew, Ghostscript is installed directly. Without Homebrew, Terminal opens and installs Homebrew, then Ghostscript; it asks for your Mac password and Enter once.
    - **2. Printer and Driver:** **Sürücüyü Kur ve Yazıcıyı Ekle** (install driver and add printer) → your Mac password. The printer appears in Printers & Scanners as "Samsung CLP-300".
    - **3. Optional:** add "PrinterManager ile Yazdır" to the PDF menu of the print dialog; turn on "open at login".
-   - **4. Photo Mode:** can be turned on if Samsung's colour files are found ([details](#photo-mode)).
+   - **4. iPhone and iPad (optional):** **Yazıcıyı yerel ağda paylaş** (share the printer on the local network) → your Mac password ([details](#printing-from-iphone-and-ipad)).
+   - **5. Photo Mode:** can be turned on if Samsung's colour files are found ([details](#photo-mode)).
 4. **Done.** Drag a PDF onto the window and click **Yazdır** (Print).
 
 <p align="center">
@@ -77,6 +78,8 @@ Then in PrinterManager: **Settings (⌘,) → macOS Sürücüsü (macOS driver) 
 - **Fuser and sleep:** see whether the printer is hot or asleep while idle, and set how many minutes before it sleeps.
 
 **Convenience**
+- **From iPhone and iPad:** Share → Print; the document opens in PrinterManager on the Mac, where you set it up and print (AirPrint).
+- **Light in the background:** with the window closed it waits in the menu bar; no polling, no CPU while idle. The window opens when a document arrives.
 - **From any app:** Safari, Preview, Word… "Print" opens the document in PrinterManager.
 - **Drag and drop**, PDF preview, time remaining.
 - **Setup Assistant**, Intel + Apple Silicon, Swift + SwiftUI.
@@ -113,6 +116,25 @@ This printer's worn transfer belt cleaner needs a wait after every page. So Safa
 - **By choosing the printer:** In the print dialog, choose "Samsung CLP-300" (added by the PrinterManager driver) and click **Print**. The print queue briefly shows "PrinterManager'da açılıyor…" (opening in PrinterManager); within a few seconds PrinterManager takes the document, deletes the job and opens it in its window. No data goes to the printer. If the app isn't running, the job stops after 30 seconds with "PrinterManager açık değil" (not open); open PrinterManager and the document arrives.
 - **From the PDF menu:** In any print dialog, bottom left **PDF ▾ → PrinterManager ile Yazdır**. Whatever printer is selected, the document opens in PrinterManager.
 - **From Finder:** drag the PDF onto the window, or right-click it → **Open With → PrinterManager**.
+
+## Printing from iPhone and iPad
+
+iPhones and iPads on the same network see the CLP-300 as an AirPrint printer:
+
+1. Once on the Mac: Settings (⌘,) or the Setup Assistant → **iPhone ve iPad'den Yazdırma** → **Yazıcıyı yerel ağda paylaş** (share on the local network) → your Mac password. If macOS asks to allow finding devices on the local network, click **Allow**.
+2. On the iPhone: in any app, **Share → Print → Samsung CLP-300 (PrinterManager)** → **Print**.
+3. Within seconds the document opens in PrinterManager on the Mac; set quality, duplex and photo mode, then click **Yazdır** (Print). Nothing goes from the phone straight to the printer.
+
+The Mac must be on and on the same network, with PrinterManager running (with the window closed it waits in the menu bar). With "open at login" on, it starts in the background when the Mac starts.
+
+How it works: macOS printer sharing announces the queue on the network, but without the `_universal` subtype and `URF` key the iOS AirPrint list looks for. While PrinterManager runs, it announces the same queue with those markers (Bonjour). The iPhone's job arrives in macOS's printing system, `pminbox` holds it, and PrinterManager takes the document. iPhone jobs arrive as another user ("mobile"); fetching them requires the Mac account to be an administrator.
+
+## Running in the Background
+
+- Closing the window (red button, or ⌘Q, "Arka Planda Çalıştır" in the menu) doesn't quit the app: the Dock icon hides and a small printer icon stays in the menu bar.
+- To quit completely: menu bar icon → **PrinterManager'dan Çık**, or ⌥⌘Q.
+- The window opens by itself when a document arrives or a print needs an answer (flip pages, printer error).
+- No polling while idle: when a job arrives, `pminbox` sends a system notification that wakes the app (plus a light fallback check every 30 s). Printer status is read only while the window is open. Measured CPU use with the window open: 0–0.5%.
 
 ### Why?
 
@@ -194,6 +216,8 @@ The app's messages are in Turkish; the English meaning is given here.
 | Printer prints an `SPL-C ERROR` page | Make sure the driver mode is "Kendi sürücü"; "Sistem sürücüsü" (system driver) causes this error. If it persists, set quality to 600 dpi. |
 | Printing from Safari doesn't open the document in PrinterManager | Is PrinterManager running? Is the printer added by the PrinterManager driver selected in the print dialog? The Setup Assistant should show the driver as "Kurulu" (installed); if you installed with an older version, click **Sürücüyü Güncelle** (update driver). |
 | Print queue shows "PrinterManager açık değil" (not open) | Open PrinterManager; within a few seconds it takes the stopped job and opens the document. |
+| iPhone says "No AirPrint Printers Found" | Is PrinterManager running (printer icon in the menu bar)? Is "Yazıcıyı yerel ağda paylaş" on in Settings? Are the iPhone and the Mac on the same Wi-Fi? In System Settings → Privacy & Security → Local Network, PrinterManager must be on. |
+| The job is stuck at "printing" on the iPhone | PrinterManager was not running or could not take the document. Open PrinterManager; the waiting job is taken within seconds, the document opens and the job disappears from the iPhone. |
 | Photo Mode can't be turned on | Samsung's colour files weren't found; see [Photo Mode](#photo-mode). |
 | Power-save time did not change | It takes effect when the printer starts: turn it off and on. In Settings, the "Şu an" (current) line should show the new time. |
 | Need details | The print log shows each page's size, time and any Ghostscript warnings. |

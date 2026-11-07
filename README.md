@@ -35,7 +35,8 @@ Samsung'un eski sürücüsü **gerekmez**. Toplam 5–10 dakika sürer, bir kez 
    - **1. Ghostscript:** Tek düğme. Homebrew kuruluysa Ghostscript doğrudan kurulur. Homebrew yoksa Terminal açılır ve önce Homebrew'u, sonra Ghostscript'i kurar; Mac şifrenizi ve bir kez Enter'ı ister.
    - **2. Yazıcı ve Sürücü:** **Sürücüyü Kur ve Yazıcıyı Ekle** → Mac şifreniz. Yazıcı, Yazıcılar ve Tarayıcılar'a "Samsung CLP-300" olarak eklenir.
    - **3. İsteğe bağlı:** Yazdırma penceresinin PDF menüsüne "PrinterManager ile Yazdır"ı ekleyin; "Oturum açılınca başlat"ı açın.
-   - **4. Fotoğraf Modu:** Samsung'un renk dosyaları bulunursa açılabilir ([ayrıntı](#fotoğraf-modu)).
+   - **4. iPhone ve iPad (isteğe bağlı):** **Yazıcıyı yerel ağda paylaş** → Mac şifreniz ([ayrıntı](#iphone-ve-ipadden-yazdırma)).
+   - **5. Fotoğraf Modu:** Samsung'un renk dosyaları bulunursa açılabilir ([ayrıntı](#fotoğraf-modu)).
 4. **Bitti.** Bir PDF'i pencereye sürükleyip **Yazdır**'a basın.
 
 <p align="center">
@@ -75,6 +76,8 @@ Sonra PrinterManager'da **Ayarlar (⌘,) → macOS Sürücüsü → Sürücüyü
 - **Fırın ve uyku:** Yazıcının boşta sıcak mı uykuda mı olduğu görünür; kaç dakikada uyuyacağı yazıcıya ayarlanır.
 
 **Kolaylık**
+- **iPhone ve iPad'den:** Paylaş → Yazdır; belge Mac'te PrinterManager'da açılır, ayarlayıp buradan basarsınız (AirPrint).
+- **Arka planda hafif:** Pencere kapanınca menü çubuğunda bekler; yoklama yapmaz, boşta işlemci harcamaz. Belge gelince pencere açılır.
 - **Her uygulamadan:** Safari, Önizleme, Word… "Yazdır" deyince belge PrinterManager'da açılır.
 - **Sürükle-bırak**, PDF önizleme, kalan süre tahmini.
 - **Kurulum Yardımcısı**, Intel + Apple Silicon, Swift + SwiftUI.
@@ -111,6 +114,25 @@ Transfer kayışı temizleyicisi yorulmuş bu yazıcı her sayfadan sonra beklem
 - **Yazıcıyı seçerek:** Yazdırma penceresinde "Samsung CLP-300" (PrinterManager sürücüsüyle eklenen) yazıcısını seçip **Yazdır** deyin. Yazdırma Sırası'nda kısa bir süre "PrinterManager'da açılıyor…" görünür; PrinterManager birkaç saniye içinde belgeyi alır, işi siler ve pencerede açar. Yazıcıya hiç veri gitmez. Uygulama kapalıysa iş 30 saniye sonra "PrinterManager açık değil" mesajıyla durur; PrinterManager'ı açınca belge gelir.
 - **PDF menüsünden:** Herhangi bir yazdırma penceresinde sol alttaki **PDF ▾ → PrinterManager ile Yazdır**. Hangi yazıcı seçili olursa olsun belge PrinterManager'da açılır.
 - **Finder'dan:** PDF'i pencereye sürükleyin ya da sağ tıklayıp **Birlikte Aç → PrinterManager** deyin.
+
+## iPhone ve iPad'den Yazdırma
+
+Aynı ağdaki iPhone ve iPad'ler CLP-300'ü AirPrint yazıcısı olarak görür:
+
+1. Mac'te bir kez: Ayarlar (⌘,) ya da Kurulum Yardımcısı → **iPhone ve iPad'den Yazdırma** → **Yazıcıyı yerel ağda paylaş** → Mac şifreniz. macOS "yerel ağdaki aygıtları bulma" izni sorarsa **İzin Ver** deyin.
+2. iPhone'da: herhangi bir uygulamada **Paylaş → Yazdır → Samsung CLP-300 (PrinterManager)** → **Yazdır**.
+3. Belge birkaç saniye içinde Mac'te PrinterManager'da açılır; kalite, çift yön ve fotoğraf modunu ayarlayıp **Yazdır**'a basarsınız. Yazıcıya telefondan doğrudan hiçbir şey gitmez.
+
+Mac açık ve aynı ağda olmalı, PrinterManager çalışıyor olmalı (pencere kapalıyken menü çubuğunda bekler). "Oturum açılınca başlat" açıksa Mac açılınca kendiliğinden arka planda başlar.
+
+Nasıl çalışıyor: macOS'un yazıcı paylaşımı kuyruğu ağda duyurur, ama iOS'un AirPrint listesi için aradığı `_universal` alt türünü ve `URF` kaydını eklemez. PrinterManager çalışırken aynı kuyruğu bu işaretlerle ayrıca duyurur (Bonjour). iPhone'un işi macOS'un yazdırma sistemine gelir, `pminbox` bekletir, PrinterManager belgeyi alır. iPhone işleri başka bir kullanıcı ("mobile") adına gelir; belgeyi alabilmek için Mac'teki hesabın yönetici olması gerekir.
+
+## Arka Planda Çalışma
+
+- Pencereyi kapatmak (kırmızı düğme ya da ⌘Q, menüde "Arka Planda Çalıştır") uygulamayı kapatmaz: Dock simgesi gizlenir, menü çubuğunda küçük bir yazıcı simgesi kalır.
+- Tamamen çıkmak: menü çubuğu simgesi → **PrinterManager'dan Çık** ya da ⌥⌘Q.
+- Belge gelince ya da yazdırma bir şey sorunca (kağıt çevirme, yazıcı hatası) pencere kendiliğinden açılır.
+- Boşta yoklama yoktur: kuyruğa iş gelince `pminbox` bir sistem bildirimi gönderir, uygulama o zaman uyanır (yedek olarak 30 sn'de bir hafif bir kontrol). Yazıcı durumu yalnızca pencere açıkken okunur. Pencere açıkken ölçülen işlemci kullanımı %0–0,5.
 
 ### Neden?
 
@@ -190,6 +212,8 @@ Ayar, yazıcının USB arayüzünden PJL komutlarıyla okunur ve yazılır. Yard
 | Yazıcı `SPL-C ERROR` sayfası basıyor | Sürücü modunun "Kendi sürücü" olduğundan emin olun; "Sistem sürücüsü" bu hatayı verir. Devam ederse kaliteyi 600 dpi yapın. |
 | Safari'den yazdırınca belge PrinterManager'da açılmıyor | PrinterManager açık mı? Yazdırma penceresinde PrinterManager sürücüsüyle eklenen yazıcı mı seçili? Kurulum Yardımcısı'nda sürücü "Kurulu" görünmeli; eski sürümle kurduysanız **Sürücüyü Güncelle** deyin. |
 | Yazdırma Sırası'nda "PrinterManager açık değil" | PrinterManager'ı açın; durdurulan iş birkaç saniye içinde alınır ve belge açılır. |
+| iPhone "AirPrint Yazıcı Bulunamadı" diyor | PrinterManager çalışıyor mu (menü çubuğunda yazıcı simgesi)? Ayarlar'da "Yazıcıyı yerel ağda paylaş" açık mı? iPhone ile Mac aynı Wi-Fi'de mi? Sistem Ayarları → Gizlilik ve Güvenlik → Yerel Ağ'da PrinterManager açık olmalı. |
+| iPhone'da iş "yazdırılıyor"da kaldı | Belge gelirken PrinterManager kapalıydı ya da alamadı. PrinterManager'ı açın; bekleyen iş birkaç saniye içinde alınır, belge açılır ve iş iPhone'dan silinir. |
 | Fotoğraf Modu açılmıyor | Samsung'un renk dosyaları bulunamadı; [Fotoğraf Modu](#fotoğraf-modu) bölümüne bakın. |
 | Güç tasarrufu süresi değişmedi | Ayar yazıcı açılırken geçerli olur: yazıcıyı kapatıp açın. Ayarlar'da "Şu an" satırı yeni süreyi göstermeli. |
 | Ayrıntı gerekiyor | Yazdırma Günlüğü her sayfanın boyutunu, süresini ve Ghostscript uyarılarını gösterir. |
