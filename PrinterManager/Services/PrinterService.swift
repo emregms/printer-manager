@@ -79,8 +79,25 @@ class PrinterService {
             stateReasons: attributes["printer-state-reasons"] ?? "none",
             makeAndModel: attributes["printer-make-and-model"] ?? "",
             deviceURI: attributes["device-uri"] ?? "",
-            pendingJobs: pendingJobs
+            pendingJobs: pendingJobs,
+            isShared: attributes["printer-is-shared"] == "true",
+            info: attributes["printer-info"] ?? queue
         )
+    }
+    
+    /// Kuyruğun kalıcı kimliği (AirPrint duyurusu için); ana iş parçacığında çağırmayın
+    func printerUUID(_ queue: String) -> String? {
+        let output = run("/usr/bin/ipptool", ["-tv", "ipp://localhost/printers/\(queue)", "get-printer-attributes.test"])
+        return output?
+            .split(separator: "\n")
+            .first { $0.contains("printer-uuid (uri)") }
+            .flatMap { $0.components(separatedBy: "urn:uuid:").last }
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+    
+    /// Sistemin Yazıcı Paylaşımı açık mı (Paylaşma ayarları); ana iş parçacığında çağırmayın
+    var isPrinterSharingEnabled: Bool {
+        run("/usr/sbin/cupsctl", [])?.contains("_share_printers=1") == true
     }
     
     /// Yazıcının bağlı ve erişilebilir olup olmadığını kontrol eder
@@ -253,6 +270,10 @@ struct PrinterQueueStatus {
     let deviceURI: String
     /// Kuyrukta bitmemiş işler (ör. "Samsung_CLP_300-114")
     let pendingJobs: [String]
+    /// Yerel ağda paylaşılıyor (iPhone/iPad AirPrint, diğer Mac'ler)
+    let isShared: Bool
+    /// Yazıcılar ve Tarayıcılar'daki adı; ağda "<ad> @ <Mac adı>" görünür
+    let info: String
     
     /// USB yazıcı kapalı ya da kablo çıkmışsa CUPS "offline-report" bildirir
     var isOffline: Bool {

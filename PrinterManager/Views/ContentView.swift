@@ -162,7 +162,11 @@ struct ContentView: View {
             }
         }
         // Başka uygulamalardan (CLP-300 kuyruğu, PDF menüsü, Finder) gelen belgeler
+        .onDisappear {
+            AppWindow.mainWindowDisappeared()
+        }
         .onAppear {
+            AppWindow.mainWindowAppeared()
             PrintInbox.shared.printManager = printManager
             PrintInbox.shared.start()
         }

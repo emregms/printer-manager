@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import ServiceManagement
+import notify
 
 /// Başka uygulamalardan gelen belgeleri PrinterManager'da açar.
 ///
@@ -27,9 +28,9 @@ final class PrintInbox: ObservableObject {
     weak var printManager: PrintManager?
     
     private var queues: [String] = []
+    /// Yedek kontrol: bildirim kaçarsa ya da kurulu pminbox eskiyse
     private var timer: Timer?
-    /// App Nap arka plandaki zamanlayıcıyı dakikalarca geciktirebilir
-    private var activity: NSObjectProtocol?
+    private var notifyToken: Int32 = NOTIFY_TOKEN_INVALID
     private var isChecking = false
     /// PDF olmadığı için alınmayan işler (her kontrolde yeniden denenmesin)
     private var skippedJobs: Set<Int> = []
@@ -38,20 +39,34 @@ final class PrintInbox: ObservableObject {
     
     // MARK: - Public Methods
     
-    /// Kuyruk izlemeyi başlatır (birden çok çağrılabilir)
+    /// pminbox her yeni işte (ve beklerken 5 sn'de bir) bu Darwin bildirimini gönderir
+    nonisolated static let notificationName = "com.samsungclp300.printermanager.incoming"
+    /// Alınan işin numarası buraya yazılır; pminbox görünce başarıyla biter
+    nonisolated private static let takenName = "com.samsungclp300.printermanager.taken"
+    /// Durum değeri yalnızca kayıt açıkken saklanır: uygulama boyunca açık tutulur
+    nonisolated private static let takenToken: Int32 = {
+        var token: Int32 = NOTIFY_TOKEN_INVALID
+        notify_register_check(takenName, &token)
+        return token
+    }()
+    
+    /// Kuyruk izlemeyi başlatır (birden çok çağrılabilir). Yoklama yerine pminbox'un
+    /// bildirimiyle uyanır: boşta işlemci ve enerji harcamaz, App Nap'e de engel olmaz.
+    /// Ekran görüntüsü modunda başlamaz: o örnek, kullanıcının gerçek işlerini almasın.
     func start() {
-        guard timer == nil else { return }
+        guard timer == nil, !ScreenshotMode.isActive else { return }
         Self.removeOldInboxFiles()
         refreshQueues()
-        // pminbox bu sırada USB'yi meşgul ediyor; çabuk alınsın. Belge genellikle
-        // uygulama arkadayken (Safari'den yazdırırken) gelir.
-        activity = ProcessInfo.processInfo.beginActivity(
-            options: .userInitiatedAllowingIdleSystemSleep,
-            reason: "CLP-300 kuyruğuna gelen belgeleri izleme")
-        let timer = Timer(timeInterval: 2, repeats: true) { [weak self] _ in
+        
+        notify_register_dispatch(Self.notificationName, &notifyToken, .main) { [weak self] _ in
             Task { @MainActor in self?.checkQueues() }
         }
-        // .common: menü ya da pencere sürüklenirken de çalışsın
+        // Yedek: bildirim gelmezse (eski pminbox) iş yine en geç ~30 sn'de alınır;
+        // pminbox süre dolunca işi "durduruldu" bırakır, o da alınır
+        let timer = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.checkQueues() }
+        }
+        timer.tolerance = 10
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
     }
@@ -60,6 +75,8 @@ final class PrintInbox: ObservableObject {
     func refreshQueues() {
         Task {
             queues = await Task.detached { DriverInstaller.inboxQueues() }.value
+            // Uygulama kapalıyken gelip bekleyen (durdurulmuş) işler hemen alınsın
+            checkQueues()
         }
     }
     
@@ -90,11 +107,8 @@ final class PrintInbox: ObservableObject {
     
     private func receive(_ document: IncomingDocument) {
         pending = document
-        NSApp.activate(ignoringOtherApps: true)
-        if !NSApp.windows.contains(where: { $0.isVisible && $0.canBecomeMain }) {
-            // Pencere kapalıysa Dock simgesi zıplasın; tıklayınca açılır
-            NSApp.requestUserAttention(.criticalRequest)
-        }
+        // Arka plandaysa pencere açılır; belgeyi pencere $pending'den alır
+        AppWindow.show()
     }
     
     private func checkQueues() {
@@ -130,28 +144,48 @@ final class PrintInbox: ObservableObject {
     /// uygulama kapalıyken zaman aşımı (stopped) ya da `lp` ile bekletilmiş (held)
     nonisolated private static let incomingStates: Set<String> = ["processing", "stopped", "held"]
     
-    /// Kullanıcının gelen ilk işini alır: belgeyi indirir, işi iptal eder
+    /// Gelen ilk işi alır: belgeyi indirir, işi iptal eder. iPhone'dan (AirPrint) gelen
+    /// işlerin sahibi başka bir kullanıcıdır; yönetici hesabı onları da alabilir.
     nonisolated private static func takeIncomingJob(queues: [String], skipping: Set<Int>) -> TakeResult {
-        let user = NSUserName()
         for queue in queues {
             guard let jobs = CupsJobs.activeJobs(queue: queue) else { continue }
-            for job in jobs where incomingStates.contains(job.state) && job.user == user && !skipping.contains(job.id) {
+            for job in jobs where incomingStates.contains(job.state) && !skipping.contains(job.id) {
                 // PrinterManager'ın kendi ham işleri (sayfalar) yazıcıya gidiyor; dokunma
                 if job.format == "application/vnd.cups-raw" { continue }
                 
                 let file = inboxFile(title: job.title)
                 guard let format = CupsJobs.fetch(id: job.id, to: file) else {
-                    return .skipped(job.id, "belge alınamadı")
+                    // Belge henüz gelmemiş olabilir: iPhone önce işi açar, belgeyi sonra
+                    // gönderir. Kalıcı sayma; pminbox'un sonraki bildiriminde yeniden dene.
+                    try? FileManager.default.removeItem(at: file.deletingLastPathComponent())
+                    continue
                 }
                 guard format.contains("pdf") || isPDF(file) else {
                     try? FileManager.default.removeItem(at: file)
                     return .skipped(job.id, "PDF değil (\(format)); kuyrukta bırakıldı")
                 }
-                _ = CupsJobs.cancel(id: job.id)
-                return .document(IncomingDocument(url: file, title: job.title, source: queue))
+                finish(job: job, queue: queue)
+                let source = job.user == NSUserName() ? queue : "\(queue), \(job.user)"
+                return .document(IncomingDocument(url: file, title: job.title, source: source))
             }
         }
         return .none
+    }
+    
+    /// Belge alındı: bekleyen pminbox'a haber ver, iş "tamamlandı" olarak bitsin (iPhone'da
+    /// iptal görünmesin). Filtre çalışmıyorsa (bekletilmiş/durdurulmuş iş, eski pminbox) sil.
+    nonisolated private static func finish(job: CupsJobs.Job, queue: String) {
+        if job.state == "processing" {
+            notify_set_state(takenToken, UInt64(job.id))
+            notify_post(takenName)
+            for _ in 0..<10 {
+                Thread.sleep(forTimeInterval: 0.3)
+                if CupsJobs.activeJobs(queue: queue)?.contains(where: { $0.id == job.id }) == false {
+                    return
+                }
+            }
+        }
+        _ = CupsJobs.cancel(id: job.id)
     }
     
     nonisolated private static func isPDF(_ url: URL) -> Bool {
@@ -304,6 +338,42 @@ enum CupsJobs {
 
 /// PDF menüsü ve Finder'dan gelen "aç" isteklerini gelen kutusuna iletir
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // Oturum açılışında arka planda başla: pencere yok, Dock simgesi yok
+        let event = NSAppleEventManager.shared().currentAppleEvent
+        if event?.eventID == kAEOpenApplication,
+           event?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem {
+            Task { @MainActor in AppWindow.startsHidden = true }
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+    
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        Task { @MainActor in
+            PrintInbox.shared.start()
+            if !ScreenshotMode.isActive {
+                AirPrintAdvertiser.shared.update()
+            }
+        }
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { note in
+            guard let window = note.object as? NSWindow else { return }
+            Task { @MainActor in AppWindow.windowWillClose(window) }
+        }
+    }
+    
+    /// Pencere kapansa da uygulama menü çubuğunda sürer
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+    
+    /// Finder'dan ya da Dock'tan yeniden açılınca pencere gelsin
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            Task { @MainActor in AppWindow.show() }
+        }
+        return true
+    }
+    
     func application(_ application: NSApplication, open urls: [URL]) {
         Task { @MainActor in
             PrintInbox.shared.open(urls: urls)

@@ -20,6 +20,8 @@ enum DriverInstaller {
     struct Status {
         /// Filtre dosyaları /Library/Printers altında mı
         let isDriverInstalled: Bool
+        /// Kurulu pminbox uygulamanınkiyle aynı mı (değilse "Sürücüyü Güncelle")
+        let isDriverUpToDate: Bool
         /// Bizim sürücüyü kullanan kuyruklar
         let queues: [String]
         /// USB'de bulunan CLP-300'ler
@@ -30,9 +32,16 @@ enum DriverInstaller {
     static func currentStatus() -> Status {
         Status(
             isDriverInstalled: FileManager.default.isExecutableFile(atPath: filterPath),
+            isDriverUpToDate: isFilterUpToDate,
             queues: inboxQueues(),
             deviceURIs: PrinterService.shared.connectedCLP300DeviceURIs()
         )
+    }
+    
+    /// Kurulu filtre, uygulama paketindekiyle aynı mı
+    static var isFilterUpToDate: Bool {
+        guard let bundled = Bundle.main.url(forResource: "pminbox", withExtension: nil) else { return true }
+        return FileManager.default.contentsEqual(atPath: bundled.path, andPath: filterPath)
     }
     
     /// Bizim PPD ile kurulmuş kuyruklar (gelen işleri bekleten); ana iş parçacığında çağırmayın
@@ -76,6 +85,14 @@ enum DriverInstaller {
             "/bin/sh", resources.appendingPathComponent("install-driver.sh").path,
             "install", resources.path, queue, deviceURI, description,
         ])
+    }
+    
+    /// Kuyruğu yerel ağda paylaşır ya da paylaşımı kapatır (iPhone/iPad AirPrint)
+    static func setShared(_ shared: Bool, queue: String) throws -> String {
+        guard let script = Bundle.main.url(forResource: "install-driver", withExtension: "sh") else {
+            throw DriverInstallerError.missingResource("install-driver.sh")
+        }
+        return try runPrivileged(["/bin/sh", script.path, "share", queue, shared ? "on" : "off"])
     }
     
     static func uninstall(queues: [String]) throws -> String {

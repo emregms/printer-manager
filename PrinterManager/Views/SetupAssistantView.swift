@@ -31,6 +31,8 @@ struct SetupAssistantView: View {
                 
                 OtherAppsSection(title: "3. Başka Uygulamalardan Yazdırma (isteğe bağlı)")
                 
+                NetworkSharingSection(title: "4. iPhone ve iPad'den Yazdırma (isteğe bağlı)")
+                
                 Section {
                     LabeledContent("Samsung renk dosyaları") {
                         if let tables = colorTables {
@@ -43,7 +45,7 @@ struct SetupAssistantView: View {
                         }
                     }
                 } header: {
-                    Text("4. Fotoğraf Modu (isteğe bağlı)")
+                    Text("5. Fotoğraf Modu (isteğe bağlı)")
                 } footer: {
                     Text("""
                     Fotoğraf modu, Samsung'un eski CLP-300 Mac sürücüsünün kurduğu renk tablosu ve \
@@ -106,10 +108,11 @@ extension SetupAssistantView {
     /// PrinterManager menüsündeki komut bu bildirimle pencereyi açar
     static let showNotification = Notification.Name("PrinterManagerShowSetupAssistant")
     
-    /// Ghostscript ya da macOS sürücüsü eksikse; ana iş parçacığında çağırmayın
+    /// Ghostscript ya da macOS sürücüsü eksik ya da sürücü eskiyse; ana iş parçacığında çağırmayın
     nonisolated static func isSetupIncomplete(settings: DriverSettings) -> Bool {
         let tools = QPDLToolStatus.check(ghostscriptPath: settings.ghostscriptPath, foo2qpdlPath: settings.foo2qpdlPath)
         return tools.ghostscriptVersion == nil || DriverInstaller.inboxQueues().isEmpty
+            || !DriverInstaller.isFilterUpToDate
     }
 }
 

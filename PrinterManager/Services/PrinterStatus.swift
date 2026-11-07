@@ -526,15 +526,22 @@ final class PrinterStatusMonitor: ObservableObject {
     
     private init() {}
     
-    /// 10 sn'de bir okur (birden çok çağrılabilir)
+    /// Pencere açıkken 10 sn'de bir okur (birden çok çağrılabilir)
     func start() {
         guard timer == nil else { return }
         refresh()
         let timer = Timer(timeInterval: 10, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refresh() }
         }
+        timer.tolerance = 2
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
+    }
+    
+    /// Pencere kapanınca: arka planda yazıcı yoklanmaz
+    func stop() {
+        timer?.invalidate()
+        timer = nil
     }
     
     #if DEBUG

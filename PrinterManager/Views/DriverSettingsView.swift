@@ -33,6 +33,8 @@ struct DriverSettingsView: View {
             
             OtherAppsSection()
             
+            NetworkSharingSection()
+            
             PowerSaveSection()
             
             Section("Lisans") {
@@ -70,7 +72,10 @@ struct DriverInstallSection: View {
         Section {
             if let status = status {
                 LabeledContent("Sürücü") {
-                    if status.isDriverInstalled {
+                    if status.isDriverInstalled && !status.isDriverUpToDate {
+                        Label("Güncelleme var: Sürücüyü Güncelle'ye basın", systemImage: "arrow.down.circle.fill")
+                            .foregroundColor(.orange)
+                    } else if status.isDriverInstalled {
                         Label(status.queues.isEmpty ? "Kurulu (kuyruk yok)" : "Kurulu: \(status.queues.joined(separator: ", "))",
                               systemImage: "checkmark.circle.fill")
                             .foregroundColor(.green)
@@ -191,6 +196,7 @@ struct DriverInstallSection: View {
             }
             await refresh()
             PrintInbox.shared.refreshQueues()
+            AirPrintAdvertiser.shared.update()
             isWorking = false
         }
     }
@@ -257,6 +263,101 @@ struct OtherAppsSection: View {
             message = "Oturum açılışı ayarlanamadı: \(error.localizedDescription)"
         }
         opensAtLogin = PrintInbox.opensAtLogin
+    }
+}
+
+/// iPhone ve iPad'den yazdırma: kuyruk yerel ağda paylaşılır (AirPrint). Telefondan gelen
+/// belge bu Mac'te PrinterManager'da açılır; baskı her zamanki gibi buradan yapılır.
+struct NetworkSharingSection: View {
+    var title = "iPhone ve iPad'den Yazdırma"
+    
+    @State private var queue: String?
+    @State private var printerName = "Samsung CLP-300"
+    @State private var computerName = "bu Mac"
+    @State private var isShared = false
+    @State private var isWorking = false
+    @State private var message: String?
+    @State private var messageIsError = false
+    
+    var body: some View {
+        Section {
+            Toggle("Yazıcıyı yerel ağda paylaş (AirPrint)", isOn: Binding(
+                get: { isShared },
+                set: { setShared($0) }
+            ))
+            .disabled(queue == nil || isWorking)
+            
+            if queue == nil {
+                Text("Önce yazıcıyı ve sürücüyü kurun.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else if isShared && !PrintInbox.opensAtLogin {
+                Text("Öneri: \"Oturum açılınca PrinterManager'ı başlat\"ı açın; PrinterManager kapalıyken gelen belgeler kuyrukta bekler.")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+            }
+            
+            if let message = message {
+                Text(message)
+                    .font(.caption)
+                    .foregroundColor(messageIsError ? .red : .green)
+                    .textSelection(.enabled)
+            }
+        } header: {
+            Text(title)
+        } footer: {
+            Text("""
+            iPhone ya da iPad'de Paylaş → Yazdır → "\(printerName) @ \(computerName)". Belge bu \
+            Mac'te PrinterManager'da açılır; ayarları yapıp buradan basarsınız. Mac açık ve aynı \
+            ağda olmalı; PrinterManager pencere kapalıyken menü çubuğunda, işlemci harcamadan \
+            bekler. Paylaşmak yönetici şifresi ister.
+            """)
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+        .task { await refresh() }
+    }
+    
+    private func refresh() async {
+        let result = await Task.detached { () -> (String?, String?, Bool, String?) in
+            // Ağda görünen ad: "<yazıcı adı> @ <Mac adı>"; ad sorgusu yavaş olabilir
+            let computer = Host.current().localizedName
+            guard let queue = DriverInstaller.inboxQueues().first,
+                  let status = PrinterService.shared.queueStatus(queue) else { return (nil, nil, false, computer) }
+            return (queue, status.info, status.isShared && PrinterService.shared.isPrinterSharingEnabled, computer)
+        }.value
+        queue = result.0
+        printerName = result.1 ?? printerName
+        isShared = result.2
+        computerName = result.3 ?? computerName
+    }
+    
+    /// Yetkili işlem: şifre penceresi ana iş parçacığında açılır
+    private func setShared(_ shared: Bool) {
+        guard let queue = queue else {
+            message = "PrinterManager kuyruğu bulunamadı; önce sürücüyü kurun."
+            messageIsError = true
+            return
+        }
+        AppWindow.log.info("Ağ paylaşımı: \(shared ? "açılıyor" : "kapatılıyor", privacy: .public) (\(queue, privacy: .public))")
+        isWorking = true
+        message = nil
+        Task { @MainActor in
+            do {
+                _ = try DriverInstaller.setShared(shared, queue: queue)
+                AirPrintAdvertiser.shared.update()
+                message = shared
+                    ? "✓ Paylaşıldı. iPhone'da yazdırırken \"\(printerName)\" görünür."
+                    : "✓ Paylaşım kapatıldı"
+                messageIsError = false
+            } catch {
+                AppWindow.log.error("Ağ paylaşımı başarısız: \(error.localizedDescription, privacy: .public)")
+                message = error.localizedDescription
+                messageIsError = true
+            }
+            await refresh()
+            isWorking = false
+        }
     }
 }
 

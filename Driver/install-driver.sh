@@ -4,6 +4,7 @@
 #
 #   install-driver.sh install <kaynak-klasör> <kuyruk> <aygıt-uri> <açıklama>
 #   install-driver.sh uninstall [kuyruk...]
+#   install-driver.sh share <kuyruk> on|off    yerel ağda paylaş (iPhone/iPad AirPrint)
 #
 # Kuyruk gelen işleri basmadan bekletir; PrinterManager onları alıp kendi
 # penceresinde açar ve sayfa arası bekleme / elle çift yönle basar.
@@ -21,7 +22,7 @@ PPD_LIBRARY_DIR=/Library/Printers/PPDs/Contents/Resources
 PPD_LIBRARY="$PPD_LIBRARY_DIR/Samsung CLP-300 PrinterManager.ppd"
 
 usage() {
-    echo "Kullanım: $0 install <kaynak> <kuyruk> <uri> <açıklama> | uninstall [kuyruk...]" >&2
+    echo "Kullanım: $0 install <kaynak> <kuyruk> <uri> <açıklama> | uninstall [kuyruk...] | share <kuyruk> on|off" >&2
     exit 2
 }
 
@@ -50,15 +51,31 @@ install)
     xattr -cr "$DEST" 2>/dev/null || true
     xattr -c "$PPD_LIBRARY" 2>/dev/null || true
 
-    # Gelen işler beklesin (PrinterManager alır); PrinterManager'ın kendi ham
-    # işleri "-H immediate" ile gönderilir. Hata olursa kuyruk durmasın.
+    # Güncellemede ağ paylaşımı ayarı korunsun
+    SHARED=$(lpoptions -p "$QUEUE" 2>/dev/null | tr ' ' '\n' | sed -n 's/^printer-is-shared=//p')
+
+    # Gelen işler bekletilmez: pminbox hemen çalışıp PrinterManager'ı uyandırır
+    # (iPhone'dan gelen işler bekletilseydi kimse serbest bırakmazdı). Hata
+    # olursa kuyruk durmasın.
     lpadmin -p "$QUEUE" -D "$DESCRIPTION" -E -v "$URI" -P "$DEST/$PPD_NAME" \
-        -o printer-is-shared=false -o printer-error-policy=abort-job \
-        -o job-hold-until-default=indefinite
+        -o printer-is-shared="${SHARED:-false}" -o printer-error-policy=abort-job \
+        -o job-hold-until-default=no-hold
     cupsenable "$QUEUE"
     cupsaccept "$QUEUE"
 
     echo "Kuruldu: $QUEUE ($URI)"
+    ;;
+share)
+    [ $# -eq 3 ] || usage
+    if [ "$3" = on ]; then
+        # Sistemdeki Yazıcı Paylaşımı (Paylaşma ayarları) açık olmalı
+        cupsctl --share-printers
+        lpadmin -p "$2" -o printer-is-shared=true
+        echo "Paylaşıldı: $2"
+    else
+        lpadmin -p "$2" -o printer-is-shared=false
+        echo "Paylaşım kapatıldı: $2"
+    fi
     ;;
 uninstall)
     shift

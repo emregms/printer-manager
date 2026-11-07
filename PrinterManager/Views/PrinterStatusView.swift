@@ -37,6 +37,7 @@ struct PrinterStatusView: View {
         .padding(.horizontal)
         .padding(.top)
         .onAppear { monitor.start() }
+        .onDisappear { monitor.stop() }
         .animation(.easeInOut(duration: 0.2), value: showDetails)
     }
     

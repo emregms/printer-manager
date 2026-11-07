@@ -333,6 +333,8 @@ class PrintManager: ObservableObject {
                 : "Yeniden basılan ön yüzler yazdırıldı.\nBu kağıtları ters çevirip yazıcıya yükleyiniz."
             showFlipPagesDialog = true
             addLog("Kağıtları çevirmeniz bekleniyor...")
+            // Pencere kapalıyken (arka planda yazdırırken) uyarı görünsün
+            Task { @MainActor in AppWindow.showIfHidden() }
             await withCheckedContinuation { continuation in
                 self.pendingDuplexContinuation = continuation
             }
@@ -593,7 +595,8 @@ class PrintManager: ObservableObject {
     
     /// Soruyu ekrana getirir ve cevabı bekler
     private func ask(_ prompt: PrintPrompt) async -> PrintPrompt.Choice {
-        await withCheckedContinuation { continuation in
+        Task { @MainActor in AppWindow.showIfHidden() }
+        return await withCheckedContinuation { continuation in
             self.promptContinuation = continuation
             self.prompt = prompt
         }

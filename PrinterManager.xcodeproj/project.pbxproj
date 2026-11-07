@@ -30,6 +30,8 @@
 		021 /* PrintQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125; };
 		022 /* SetupAssistantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127; };
 		023 /* ScreenshotMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128; };
+		024 /* AppWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129; };
+		025 /* AirPrintAdvertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 130; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -62,6 +64,9 @@
 		125 /* PrintQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintQueueView.swift; sourceTree = "<group>"; };
 		127 /* SetupAssistantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupAssistantView.swift; sourceTree = "<group>"; };
 		128 /* ScreenshotMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotMode.swift; sourceTree = "<group>"; };
+		129 /* AppWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppWindow.swift; sourceTree = "<group>"; };
+		130 /* AirPrintAdvertiser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPrintAdvertiser.swift; sourceTree = "<group>"; };
+		131 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -107,6 +112,7 @@
 				306 /* Models */,
 				307 /* Resources */,
 				111 /* PrinterManager.entitlements */,
+				131 /* Info.plist */,
 			);
 			path = PrinterManager;
 			sourceTree = "<group>";
@@ -124,6 +130,7 @@
 			children = (
 				101 /* PrinterManagerApp.swift */,
 				128 /* ScreenshotMode.swift */,
+				129 /* AppWindow.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -152,6 +159,7 @@
 				112 /* QPDLDriver.swift */,
 				114 /* DriverInstaller.swift */,
 				120 /* PrintInbox.swift */,
+				130 /* AirPrintAdvertiser.swift */,
 				121 /* PrinterStatus.swift */,
 			);
 			path = Services;
@@ -328,6 +336,8 @@
 				021 /* PrintQueueView.swift in Sources */,
 				022 /* SetupAssistantView.swift in Sources */,
 				023 /* ScreenshotMode.swift in Sources */,
+				024 /* AppWindow.swift in Sources */,
+				025 /* AirPrintAdvertiser.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -463,7 +473,9 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PrinterManager/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Yazıcı Yöneticisi";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "iPhone ve iPad'in Samsung CLP-300'ü AirPrint yazıcısı olarak görmesi için yazıcı yerel ağda duyurulur.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2024. All rights reserved.";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
@@ -492,7 +504,9 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PrinterManager/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Yazıcı Yöneticisi";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "iPhone ve iPad'in Samsung CLP-300'ü AirPrint yazıcısı olarak görmesi için yazıcı yerel ağda duyurulur.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2024. All rights reserved.";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;

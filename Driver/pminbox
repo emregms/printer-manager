@@ -12,18 +12,38 @@
 #
 # Baskı burada yapılmaz: macOS yazdırma sistemi filtreleri kısıtlı bir
 # ortamda çalıştırdığı için Ghostscript'e buradan ulaşılamıyor.
+#
+# iPhone/iPad'den (AirPrint, paylaşılan kuyruk) gelen işler de aynı yoldan geçer.
+# PrinterManager belgeyi alınca "taken" durumuna iş numarasını yazar; filtre o
+# zaman yazıcıya veri göndermeden başarıyla biter, iş gönderende "tamamlandı" görünür.
 
 WAIT_SECONDS=30
+JOB=${1:-0}
 
 trap 'exit 0' TERM
 
 echo "INFO: PrinterManager'da açılıyor..." >&2
+
+# PrinterManager arka planda yoklama yapmaz, bu Darwin bildirimiyle uyanır.
+# Uygulama o an açılıyor olabilir: bekleme boyunca 5 sn'de bir yinele.
+notify() {
+    /usr/bin/notifyutil -p com.samsungclp300.printermanager.incoming >/dev/null 2>&1 || true
+}
+taken() {
+    [ "$(/usr/bin/notifyutil -g com.samsungclp300.printermanager.taken 2>/dev/null | awk '{print $2}')" = "$JOB" ]
+}
+notify
 
 # sleep'i kısa adımlarla çalıştır: iptal (SIGTERM) en geç 1 sn içinde işlensin
 elapsed=0
 while [ "$elapsed" -lt "$WAIT_SECONDS" ]; do
     sleep 1
     elapsed=$((elapsed + 1))
+    if taken; then
+        echo "INFO: PrinterManager'da açıldı" >&2
+        exit 0
+    fi
+    [ $((elapsed % 5)) -eq 0 ] && notify
 done
 
 echo "ERROR: PrinterManager açık değil. PrinterManager'ı açın; belge kendiliğinden gelir." >&2
