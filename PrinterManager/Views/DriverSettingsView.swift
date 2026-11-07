@@ -351,7 +351,7 @@ struct NetworkSharingSection: View {
         queue = result.0
         printerName = result.1 ?? printerName
         isShared = result.2
-        computerName = result.3 ?? computerName
+        computerName = ScreenshotMode.isActive ? "Mac" : result.3 ?? computerName
     }
     
     /// Yetkili işlem: şifre penceresi ana iş parçacığında açılır

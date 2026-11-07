@@ -46,6 +46,8 @@ enum ScreenshotMode {
         settingsStore.photoMode = true
         settingsStore.qpdlResolution = .dpi1200x600
         settingsStore.grayscaleMode = false
+        let savedMenuBarIcon = UserDefaults.standard.object(forKey: "showMenuBarIcon")
+        UserDefaults.standard.set(true, forKey: "showMenuBarIcon")
         
         await pause(1)
         guard let window = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain }) else { return }
@@ -89,6 +91,7 @@ enum ScreenshotMode {
         settings.close()
         
         (settingsStore.duplexEnabled, settingsStore.photoMode, settingsStore.qpdlResolution, settingsStore.grayscaleMode) = saved
+        UserDefaults.standard.set(savedMenuBarIcon, forKey: "showMenuBarIcon")
         NSApp.terminate(nil)
     }
     
