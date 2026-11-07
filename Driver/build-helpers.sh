@@ -3,7 +3,7 @@
 # Contents/Helpers klasörüne derler ve uygulamanın kimliğiyle imzalar:
 #   cups-jobs       başka uygulamalardan gelen işleri alır (libcups)
 #   clp300-status   yazıcının durumunu ve tonerlerini USB'den okur (IOKit)
-#   clp300-raster   fotoğraf modu: Samsung'un renk tablosuyla rasteri noktalara çevirir
+#   clp300-raster   fotoğraf modu: renk tablosu ve yarım tonla rasteri noktalara çevirir
 set -eu
 
 SRC="${SRCROOT}/Driver"

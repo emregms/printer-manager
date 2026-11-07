@@ -32,9 +32,9 @@ struct SetupAssistantView: View {
                 OtherAppsSection(title: "3. Başka Uygulamalardan Yazdırma (isteğe bağlı)")
                 
                 Section {
-                    LabeledContent("Samsung renk dosyaları") {
+                    LabeledContent("Renk verisi") {
                         if let tables = colorTables {
-                            Label("Bulundu", systemImage: "checkmark.circle.fill")
+                            Label(tables.source.title, systemImage: "checkmark.circle.fill")
                                 .foregroundColor(.green)
                                 .help(tables.directory.path)
                         } else {
@@ -43,13 +43,14 @@ struct SetupAssistantView: View {
                         }
                     }
                 } header: {
-                    Text("4. Fotoğraf Modu (isteğe bağlı)")
+                    Text("4. Fotoğraf Modu")
                 } footer: {
                     Text("""
-                    Fotoğraf modu, Samsung'un eski CLP-300 Mac sürücüsünün kurduğu renk tablosu ve \
-                    yarım ton dosyalarıyla basar. Uygulama bunları \
-                    \(PrinterColorTables.searchDirectories.map { $0.path.replacingOccurrences(of: NSHomeDirectory(), with: "~") }.joined(separator: " ya da ")) \
-                    klasöründe arar. Bulunamazsa her şey çalışır; yalnızca Fotoğraf Modu kapalı kalır.
+                    Fotoğraf modu uygulamanın içinde gelen kendi CLP-300 renk tablosu ve yarım ton \
+                    desenleriyle basar; ayrıca bir şey kurmak gerekmez. Samsung'un eski Mac sürücüsünün \
+                    renk dosyaları varsa önce onlar kullanılır. Arama sırası: \
+                    \(PrinterColorTables.searchDirectories.dropLast().map { $0.url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~") }.joined(separator: ", ")), \
+                    sonra uygulamanın içi.
                     """)
                     .font(.caption)
                     .foregroundColor(.secondary)

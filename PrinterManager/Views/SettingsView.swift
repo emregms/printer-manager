@@ -8,8 +8,8 @@ struct SettingsView: View {
     
     @State private var availablePrinters: [String] = []
     @State private var toolStatus: QPDLToolStatus?
-    /// Samsung sürücüsünün renk dosyaları (fotoğraf modu) yerinde mi
-    @State private var hasColorTables = PrinterColorTables.find() != nil
+    /// Fotoğraf modunun renk verisi: Samsung'unki, kullanıcı klasörü ya da uygulamanın içindeki
+    @State private var colorTables = PrinterColorTables.find()
     
     var body: some View {
         ScrollView {
@@ -133,22 +133,22 @@ struct SettingsView: View {
                         .padding(.leading, 4)
                 }
                 
-                // Fotoğraf Modu: Samsung'un renk tablosu (yalnızca kendi sürücüde)
+                // Fotoğraf Modu: kendi renk tablosu ve yarım tonu (yalnızca kendi sürücüde)
                 Toggle(isOn: $settingsStore.photoMode) {
                     Label("Fotoğraf Modu", systemImage: "photo")
                         .font(.subheadline.weight(.medium))
                 }
                 .toggleStyle(.switch)
                 .tint(.orange)
-                .disabled(settingsStore.driverMode != .own || !hasColorTables || printManager.isPrinting)
+                .disabled(settingsStore.driverMode != .own || colorTables == nil || printManager.isPrinting)
                 
-                if settingsStore.driverMode == .own && !hasColorTables {
-                    Text("Fotoğraf modu için Samsung'un CLP-300 renk dosyaları bulunamadı; ayrıntı Kurulum Yardımcısı'nda.")
+                if settingsStore.driverMode == .own && colorTables == nil {
+                    Text("Fotoğraf modunun renk dosyaları bulunamadı; uygulamayı yeniden kurun. Ayrıntı Kurulum Yardımcısı'nda.")
                         .font(.caption)
                         .foregroundColor(.orange)
                         .padding(.leading, 4)
-                } else if settingsStore.photoMode && settingsStore.driverMode == .own {
-                    Text("Renkler Samsung'un CLP-300 için ayarladığı renk tablosu ve yarım ton desenleriyle çevrilir: gölgeler açılır, renkler doğal çıkar. Fotoğraflar için; 1200x600 dpi önerilir.")
+                } else if let tables = colorTables, settingsStore.photoMode && settingsStore.driverMode == .own {
+                    Text("\(tables.summary). Fotoğraflar için; 1200x600 dpi önerilir.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.leading, 4)

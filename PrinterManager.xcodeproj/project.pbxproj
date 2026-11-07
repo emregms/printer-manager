@@ -30,6 +30,7 @@
 		021 /* PrintQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125; };
 		022 /* SetupAssistantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127; };
 		023 /* ScreenshotMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128; };
+		024 /* ColorTables in Resources */ = {isa = PBXBuildFile; fileRef = 129; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -62,6 +63,7 @@
 		125 /* PrintQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintQueueView.swift; sourceTree = "<group>"; };
 		127 /* SetupAssistantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupAssistantView.swift; sourceTree = "<group>"; };
 		128 /* ScreenshotMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotMode.swift; sourceTree = "<group>"; };
+		129 /* ColorTables */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ColorTables; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -170,6 +172,7 @@
 			isa = PBXGroup;
 			children = (
 				110 /* Assets.xcassets */,
+				129 /* ColorTables */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -239,6 +242,7 @@
 				014 /* pminbox in Resources */,
 				015 /* Samsung-CLP-300-PrinterManager.ppd in Resources */,
 				016 /* install-driver.sh in Resources */,
+				024 /* ColorTables in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

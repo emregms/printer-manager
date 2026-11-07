@@ -1,18 +1,21 @@
 /*
  * clp300-raster: Ghostscript'in renkli (P6) ya da gri (P5) raster çıktısını
- * Samsung'un CLP-300 renk tablosu ve yarım ton matrisleriyle foo2qpdl'in
- * beklediği 1 bitlik rastere çevirir (fotoğraf modu).
+ * bir CLP-300 renk tablosu ve yarım ton matrisleriyle foo2qpdl'in beklediği
+ * 1 bitlik rastere çevirir (fotoğraf modu).
  *
- * Veriler Samsung'un Mac sürücüsünün kurduğu düz metin dosyalarından okunur
- * (/Library/Printers/Samsung/CLP-300); repoda yoktur:
+ * Veriler bir klasördeki düz metin dosyalarından okunur: Samsung'un Mac
+ * sürücüsünün kurduğu dosyalar (/Library/Printers/Samsung/CLP-300; repoda
+ * yoktur) ya da Scripts/make-colour-tables.py'nin baştan ürettiği, uygulamayla
+ * gelen kendi verimiz (PrinterManager/Resources/ColorTables/CLP-300):
  *   RGB2CMYK_<çözünürlük>1  "17 17 17 4" başlığı, sonra R (en yavaş), G, B
  *                           sırasıyla 17x17x17 düğümde C M Y K. Değerler
  *                           ters: 255 toner yok, 0 tam toner.
  *   <Renk>HT_<çözünürlük>   genişlik, yükseklik, sonra satır satır eşikler
  *                           (1-255). Değer eşikten küçükse nokta basılır.
- * Biçim ve kural dosyaların kendisinden çıkarıldı: eşik dağılımı yalnızca
+ * Biçim ve kural Samsung'un dosyalarından çıkarıldı: eşik dağılımı yalnızca
  * "değer < eşik" kuralıyla açık tonları açık bırakır (%50 girişte ~%41
- * kaplama); yani matrisler yazıcının nokta kazancını zaten dengeler.
+ * kaplama); yani matrisler yazıcının nokta kazancını zaten dengeler. Kendi
+ * verimiz de aynı kurala göre üretilir (%50 girişte %40 kaplama).
  *
  *   clp300-raster <veri-klasörü> <600x600|1200x600|1200x1200>  <P6|P5  >bitcmyk|P4
  *
