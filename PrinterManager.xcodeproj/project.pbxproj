@@ -17,6 +17,22 @@
 		008 /* PrinterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108; };
 		009 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109; };
 		010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 110; };
+		011 /* QPDLDriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112; };
+		012 /* DriverSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113; };
+		013 /* DriverInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114; };
+		014 /* pminbox in Resources */ = {isa = PBXBuildFile; fileRef = 115; };
+		015 /* Samsung-CLP-300-PrinterManager.ppd in Resources */ = {isa = PBXBuildFile; fileRef = 116; };
+		016 /* install-driver.sh in Resources */ = {isa = PBXBuildFile; fileRef = 117; };
+		017 /* PrintInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120; };
+		018 /* PrinterStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 121; };
+		019 /* PrinterStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122; };
+		020 /* PrintQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 124; };
+		021 /* PrintQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125; };
+		022 /* SetupAssistantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127; };
+		023 /* ScreenshotMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128; };
+		024 /* AppWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129; };
+		025 /* AirPrintAdvertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 130; };
+		026 /* ColorTables in Resources */ = {isa = PBXBuildFile; fileRef = 132; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +48,27 @@
 		109 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		110 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		111 /* PrinterManager.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PrinterManager.entitlements; sourceTree = "<group>"; };
+		112 /* QPDLDriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QPDLDriver.swift; sourceTree = "<group>"; };
+		113 /* DriverSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverSettingsView.swift; sourceTree = "<group>"; };
+		114 /* DriverInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverInstaller.swift; sourceTree = "<group>"; };
+		115 /* pminbox */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = pminbox; sourceTree = "<group>"; };
+		116 /* Samsung-CLP-300-PrinterManager.ppd */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Samsung-CLP-300-PrinterManager.ppd"; sourceTree = "<group>"; };
+		117 /* install-driver.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "install-driver.sh"; sourceTree = "<group>"; };
+		118 /* cups-jobs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "cups-jobs.c"; sourceTree = "<group>"; };
+		119 /* build-helpers.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "build-helpers.sh"; sourceTree = "<group>"; };
+		120 /* PrintInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintInbox.swift; sourceTree = "<group>"; };
+		121 /* PrinterStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrinterStatus.swift; sourceTree = "<group>"; };
+		122 /* PrinterStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrinterStatusView.swift; sourceTree = "<group>"; };
+		123 /* clp300-status.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "clp300-status.c"; sourceTree = "<group>"; };
+		126 /* clp300-raster.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "clp300-raster.c"; sourceTree = "<group>"; };
+		124 /* PrintQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintQueue.swift; sourceTree = "<group>"; };
+		125 /* PrintQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintQueueView.swift; sourceTree = "<group>"; };
+		127 /* SetupAssistantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupAssistantView.swift; sourceTree = "<group>"; };
+		128 /* ScreenshotMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotMode.swift; sourceTree = "<group>"; };
+		129 /* AppWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppWindow.swift; sourceTree = "<group>"; };
+		130 /* AirPrintAdvertiser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPrintAdvertiser.swift; sourceTree = "<group>"; };
+		131 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		132 /* ColorTables */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ColorTables; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,8 +86,23 @@
 			isa = PBXGroup;
 			children = (
 				301 /* PrinterManager */,
+				308 /* Driver */,
 				302 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		308 /* Driver */ = {
+			isa = PBXGroup;
+			children = (
+				115 /* pminbox */,
+				116 /* Samsung-CLP-300-PrinterManager.ppd */,
+				117 /* install-driver.sh */,
+				118 /* cups-jobs.c */,
+				119 /* build-helpers.sh */,
+				123 /* clp300-status.c */,
+				126 /* clp300-raster.c */,
+			);
+			path = Driver;
 			sourceTree = "<group>";
 		};
 		301 /* PrinterManager */ = {
@@ -62,6 +114,7 @@
 				306 /* Models */,
 				307 /* Resources */,
 				111 /* PrinterManager.entitlements */,
+				131 /* Info.plist */,
 			);
 			path = PrinterManager;
 			sourceTree = "<group>";
@@ -78,6 +131,8 @@
 			isa = PBXGroup;
 			children = (
 				101 /* PrinterManagerApp.swift */,
+				128 /* ScreenshotMode.swift */,
+				129 /* AppWindow.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -89,6 +144,10 @@
 				103 /* SettingsView.swift */,
 				104 /* PDFPreviewView.swift */,
 				105 /* PrintProgressView.swift */,
+				113 /* DriverSettingsView.swift */,
+				122 /* PrinterStatusView.swift */,
+				125 /* PrintQueueView.swift */,
+				127 /* SetupAssistantView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -99,6 +158,11 @@
 				106 /* PrintManager.swift */,
 				107 /* PDFProcessor.swift */,
 				108 /* PrinterService.swift */,
+				112 /* QPDLDriver.swift */,
+				114 /* DriverInstaller.swift */,
+				120 /* PrintInbox.swift */,
+				130 /* AirPrintAdvertiser.swift */,
+				121 /* PrinterStatus.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -107,6 +171,7 @@
 			isa = PBXGroup;
 			children = (
 				109 /* SettingsStore.swift */,
+				124 /* PrintQueue.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -115,6 +180,7 @@
 			isa = PBXGroup;
 			children = (
 				110 /* Assets.xcassets */,
+				132 /* ColorTables */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -129,6 +195,9 @@
 				401 /* Sources */,
 				200 /* Frameworks */,
 				402 /* Resources */,
+				403 /* Build foo2qpdl */,
+				404 /* Build helpers */,
+				405 /* Bundle Ghostscript */,
 			);
 			buildRules = (
 			);
@@ -179,10 +248,102 @@
 			buildActionMask = 2147483647;
 			files = (
 				010 /* Assets.xcassets in Resources */,
+				014 /* pminbox in Resources */,
+				015 /* Samsung-CLP-300-PrinterManager.ppd in Resources */,
+				016 /* install-driver.sh in Resources */,
+				026 /* ColorTables in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		403 /* Build foo2qpdl */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 0;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/ThirdParty/foo2qpdl/build-helper.sh",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/foo2qpdl.c",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/jbig.c",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/jbig.h",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/jbig_ar.c",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/jbig_ar.h",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/qpdl.h",
+				"$(SRCROOT)/ThirdParty/foo2qpdl/COPYING",
+			);
+			name = "Build foo2qpdl";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/foo2qpdl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/foo2qpdl-COPYING.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/sh \"${SRCROOT}/ThirdParty/foo2qpdl/build-helper.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		404 /* Build helpers */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 0;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Driver/build-helpers.sh",
+				"$(SRCROOT)/Driver/cups-jobs.c",
+				"$(SRCROOT)/Driver/clp300-status.c",
+				"$(SRCROOT)/Driver/clp300-raster.c",
+			);
+			name = "Build helpers";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/cups-jobs",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/clp300-status",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/clp300-raster",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/sh \"${SRCROOT}/Driver/build-helpers.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		405 /* Bundle Ghostscript */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 0;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/ThirdParty/ghostscript/bundle-helper.sh",
+				"$(SRCROOT)/ThirdParty/ghostscript/bin/gs",
+				"$(SRCROOT)/ThirdParty/ghostscript/COPYING",
+				"$(SRCROOT)/ThirdParty/ghostscript/THIRD-PARTY.txt",
+				"$(SRCROOT)/ThirdParty/ghostscript/SHA256SUMS",
+			);
+			name = "Bundle Ghostscript";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/gs",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ghostscript-COPYING.txt",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ghostscript-THIRD-PARTY.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/sh \"${SRCROOT}/ThirdParty/ghostscript/bundle-helper.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		401 /* Sources */ = {
@@ -198,6 +359,18 @@
 				007 /* PDFProcessor.swift in Sources */,
 				008 /* PrinterService.swift in Sources */,
 				009 /* SettingsStore.swift in Sources */,
+				011 /* QPDLDriver.swift in Sources */,
+				012 /* DriverSettingsView.swift in Sources */,
+				013 /* DriverInstaller.swift in Sources */,
+				017 /* PrintInbox.swift in Sources */,
+				018 /* PrinterStatus.swift in Sources */,
+				019 /* PrinterStatusView.swift in Sources */,
+				020 /* PrintQueue.swift in Sources */,
+				021 /* PrintQueueView.swift in Sources */,
+				022 /* SetupAssistantView.swift in Sources */,
+				023 /* ScreenshotMode.swift in Sources */,
+				024 /* AppWindow.swift in Sources */,
+				025 /* AirPrintAdvertiser.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -328,12 +501,14 @@
 				CODE_SIGN_ENTITLEMENTS = PrinterManager/PrinterManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PrinterManager/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Yazıcı Yöneticisi";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "iPhone ve iPad'in Samsung CLP-300'ü AirPrint yazıcısı olarak görmesi için yazıcı yerel ağda duyurulur.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2024. All rights reserved.";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
@@ -341,7 +516,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samsungclp300.printermanager;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -357,12 +532,14 @@
 				CODE_SIGN_ENTITLEMENTS = PrinterManager/PrinterManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PrinterManager/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Yazıcı Yöneticisi";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "iPhone ve iPad'in Samsung CLP-300'ü AirPrint yazıcısı olarak görmesi için yazıcı yerel ağda duyurulur.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2024. All rights reserved.";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
@@ -370,7 +547,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samsungclp300.printermanager;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

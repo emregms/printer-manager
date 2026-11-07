@@ -65,16 +65,20 @@ actor PDFProcessor {
         }
     }
     
+    /// Bu işin geçici dizini (yoksa oluşturur); cleanupTempFiles() ile silinir
+    func workingDirectory() throws -> URL {
+        if let existingDir = tempDirectory {
+            return existingDir
+        }
+        let tempDir = try createTempDirectory()
+        self.tempDirectory = tempDir
+        return tempDir
+    }
+    
     /// Boş sayfa oluşturur (çift yönlü yazdırma için)
     func createBlankPage(size: CGSize? = nil) async throws -> URL {
         // Temp dizini yoksa oluştur
-        let tempDir: URL
-        if let existingDir = tempDirectory {
-            tempDir = existingDir
-        } else {
-            tempDir = try createTempDirectory()
-            self.tempDirectory = tempDir
-        }
+        let tempDir = try workingDirectory()
         
         // Standart A4 boyutu veya belirtilen boyut
         let pageSize = size ?? CGSize(width: 595, height: 842) // A4 @ 72 DPI

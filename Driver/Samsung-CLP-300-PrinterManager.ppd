@@ -1,0 +1,56 @@
+*PPD-Adobe: "4.3"
+*%
+*% Samsung CLP-300 - PrinterManager
+*% https://github.com/emregms/printer-manager
+*%
+*% Jobs sent to this queue are not printed: the pminbox filter waits without
+*% sending data while PrinterManager takes the job's document, cancels the
+*% job and opens it. PrinterManager prints with a delay between pages (the
+*% CLP-300's transfer belt cleaner needs it) and manual duplex, sending ready
+*% QPDL data raw. If the app is not running, the job stops after 30 s and is
+*% picked up when the app starts.
+*%
+*FormatVersion: "4.3"
+*FileVersion: "2.0"
+*LanguageVersion: English
+*LanguageEncoding: ISOLatin1
+*PCFileName: "CLP300PM.PPD"
+*Manufacturer: "Samsung"
+*Product: "(CLP-300)"
+*ModelName: "Samsung CLP-300 PrinterManager"
+*ShortNickName: "Samsung CLP-300 PrinterManager"
+*NickName: "Samsung CLP-300 PrinterManager"
+*1284DeviceID: "MFG:Samsung;CMD:SPLC;MDL:CLP-300;CLS:PRINTER;"
+*PSVersion: "(3010.000) 0"
+*LanguageLevel: "3"
+*ColorDevice: True
+*DefaultColorSpace: RGB
+*FileSystem: False
+*Throughput: "4"
+*LandscapeOrientation: Plus90
+*TTRasterizer: Type42
+*cupsVersion: 2.3
+*cupsManualCopies: True
+*cupsFilter2: "application/vnd.cups-pdf application/vnd.cups-raw 0 /Library/Printers/PrinterManager/Filters/pminbox"
+
+*OpenUI *PageSize/Media Size: PickOne
+*OrderDependency: 10 AnySetup *PageSize
+*DefaultPageSize: A4
+*PageSize A4/A4: "<</PageSize[595 842]/ImagingBBox null>>setpagedevice"
+*CloseUI: *PageSize
+
+*OpenUI *PageRegion/Media Size: PickOne
+*OrderDependency: 10 AnySetup *PageRegion
+*DefaultPageRegion: A4
+*PageRegion A4/A4: "<</PageSize[595 842]/ImagingBBox null>>setpagedevice"
+*CloseUI: *PageRegion
+
+*% Margins: 3.175 mm left/right, 4.23 mm top/bottom (foo2zjs CLP-300)
+*DefaultImageableArea: A4
+*ImageableArea A4/A4: "9 12 586 830"
+*DefaultPaperDimension: A4
+*PaperDimension A4/A4: "595 842"
+
+*DefaultFont: Courier
+*Font Courier: Standard "(002.004S)" Standard ROM
+*% End of Samsung-CLP-300-PrinterManager.ppd
