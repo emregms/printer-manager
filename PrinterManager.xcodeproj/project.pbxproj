@@ -28,6 +28,8 @@
 		019 /* PrinterStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122; };
 		020 /* PrintQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 124; };
 		021 /* PrintQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125; };
+		022 /* SetupAssistantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127; };
+		023 /* ScreenshotMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -58,6 +60,8 @@
 		126 /* clp300-raster.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "clp300-raster.c"; sourceTree = "<group>"; };
 		124 /* PrintQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintQueue.swift; sourceTree = "<group>"; };
 		125 /* PrintQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintQueueView.swift; sourceTree = "<group>"; };
+		127 /* SetupAssistantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupAssistantView.swift; sourceTree = "<group>"; };
+		128 /* ScreenshotMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotMode.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -119,6 +123,7 @@
 			isa = PBXGroup;
 			children = (
 				101 /* PrinterManagerApp.swift */,
+				128 /* ScreenshotMode.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -133,6 +138,7 @@
 				113 /* DriverSettingsView.swift */,
 				122 /* PrinterStatusView.swift */,
 				125 /* PrintQueueView.swift */,
+				127 /* SetupAssistantView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -320,6 +326,8 @@
 				019 /* PrinterStatusView.swift in Sources */,
 				020 /* PrintQueue.swift in Sources */,
 				021 /* PrintQueueView.swift in Sources */,
+				022 /* SetupAssistantView.swift in Sources */,
+				023 /* ScreenshotMode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -450,7 +458,7 @@
 				CODE_SIGN_ENTITLEMENTS = PrinterManager/PrinterManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -463,7 +471,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samsungclp300.printermanager;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -479,7 +487,7 @@
 				CODE_SIGN_ENTITLEMENTS = PrinterManager/PrinterManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -492,7 +500,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samsungclp300.printermanager;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

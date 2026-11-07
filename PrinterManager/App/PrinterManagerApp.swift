@@ -28,6 +28,11 @@ struct PrinterManagerApp: App {
         .defaultSize(width: 1100, height: 720)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(after: .appSettings) {
+                Button("Kurulum Yardımcısı…") {
+                    NotificationCenter.default.post(name: SetupAssistantView.showNotification, object: nil)
+                }
+            }
         }
         
         Settings {

@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var showFilePicker = false
     @State private var showFlipPagesAlert = false
     @State private var isDropTargeted = false
+    @State private var showSetupAssistant = false
     
     var body: some View {
         HStack(spacing: 0) {
@@ -133,6 +134,32 @@ struct ContentView: View {
         }
         .onReceive(printManager.$showFlipPagesDialog) { show in
             showFlipPagesAlert = show
+        }
+        // Yeni bir Mac: Ghostscript ya da sürücü eksikse kurulum yardımcısı açılır
+        .sheet(isPresented: $showSetupAssistant) {
+            SetupAssistantView()
+                .environmentObject(settingsStore)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: SetupAssistantView.showNotification)) { _ in
+            showSetupAssistant = true
+        }
+        .task {
+            #if DEBUG
+            if ScreenshotMode.isActive {
+                await ScreenshotMode.run(
+                    printManager: printManager,
+                    settingsStore: settingsStore,
+                    open: { PrintInbox.shared.open(urls: [$0], source: "örnek") },
+                    showSetup: { showSetupAssistant = $0 }
+                )
+                return
+            }
+            #endif
+            let settings = settingsStore.driverSettings
+            let incomplete = await Task.detached { SetupAssistantView.isSetupIncomplete(settings: settings) }.value
+            if incomplete && !ScreenshotMode.isActive {
+                showSetupAssistant = true
+            }
         }
         // Başka uygulamalardan (CLP-300 kuyruğu, PDF menüsü, Finder) gelen belgeler
         .onAppear {

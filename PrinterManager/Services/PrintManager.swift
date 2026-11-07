@@ -545,7 +545,6 @@ class PrintManager: ObservableObject {
             guard !isCancelled else { break }
             
             let stepStart = Date()
-            let stepDuration: TimeInterval = 0.1 // 100ms adımlar
             
             // Kalan süreyi güncelle
             self.timeRemaining = remainingDuration
@@ -873,6 +872,58 @@ extension PrintManager {
         }
     }
 }
+
+#if DEBUG
+// MARK: - Screenshot Demo
+
+extension PrintManager {
+    /// Ekran görüntüsü için örnek sıra: 6 sayfa çift yön; 3. sayfa bir kez yeniden basılmış,
+    /// 5/6 kağıdı bozuk işaretlenmiş, 4. sayfanın arka yüzü basılıyor. Hiçbir şey gönderilmez.
+    func showDemoQueue() {
+        var demo = PrintQueue(documentPageCount: 6, sheetPageCount: 6, duplex: true)
+        func id(_ page: Int, _ side: PrintStep.Side) -> UUID {
+            demo.steps.first { $0.pageNumber == page && $0.side == side && $0.state == .pending }!.id
+        }
+        demo.setState(.printed, for: id(1, .front))
+        _ = demo.apply(.reprintNow, to: id(3, .front))
+        demo.setState(.printed, for: id(3, .front))
+        demo.setState(.printed, for: id(5, .front))
+        let six = id(6, .back)
+        demo.setState(.printed, for: six)
+        let current = id(4, .back)
+        demo.setState(.printing, for: current)
+        let message = demo.apply(.spoilSheet, to: six)
+        
+        queue = demo
+        currentStepID = current
+        currentPage = 4
+        totalPages = demo.steps.count
+        usesSmartTiming = true
+        isPrinting = true
+        progress = 0.58
+        timeRemaining = 17
+        lastIntervention = message
+        canUndoIntervention = true
+        logs = []
+        addLog("Kalite: 1200x600 dpi (önerilen), renkli, fotoğraf modu")
+        addLog("✓ Sayfa 6 (arka yüz) yazıcıya gönderildi")
+        addLog("Sayfa 6 basıldı, kayış temizlendi: 38 sn")
+        addLog("✋ \(message ?? "")")
+        addLog("✓ Sayfa 4 (arka yüz) yazıcıya gönderildi")
+    }
+    
+    func endDemo() {
+        isPrinting = false
+        queue = nil
+        currentStepID = nil
+        currentPage = nil
+        lastIntervention = nil
+        canUndoIntervention = false
+        progress = 0
+        timeRemaining = 0
+    }
+}
+#endif
 
 // MARK: - Types
 

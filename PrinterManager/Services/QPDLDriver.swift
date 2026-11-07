@@ -260,7 +260,13 @@ struct QPDLTools {
 /// matrisleri. Fotoğraf modu bunlarla basar. Dosyalar repoda ve uygulamada yoktur;
 /// Samsung sürücüsü kuruluysa yerinden okunur (bkz. Driver/clp300-raster.c).
 struct PrinterColorTables {
-    static let directory = URL(fileURLWithPath: "/Library/Printers/Samsung/CLP-300")
+    /// Samsung sürücüsünün kurduğu yer; yoksa kullanıcının koyabileceği klasör (yönetici izni gerekmez)
+    static let searchDirectories = [
+        URL(fileURLWithPath: "/Library/Printers/Samsung/CLP-300"),
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("PrinterManager/CLP-300"),
+    ]
+    static var directory: URL { searchDirectories[0] }
     static var bundledHelper: URL {
         Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/clp300-raster")
     }
@@ -268,7 +274,7 @@ struct PrinterColorTables {
     let directory: URL
     let helper: URL
     
-    /// Üç çözünürlüğün dosyaları ve yardımcı araç yerindeyse
+    /// Üç çözünürlüğün dosyalarının hepsi bulunan ilk klasör (yardımcı araç da yerindeyse)
     static func find() -> PrinterColorTables? {
         let fileManager = FileManager.default
         var files = ["RGB2CMYK_6006001", "RGB2CMYK_12006001", "RGB2CMYK_120012001"]
@@ -276,7 +282,9 @@ struct PrinterColorTables {
             files += ["600", "1200600", "12001200"].map { "\(color)HT_\($0)" }
         }
         guard fileManager.isExecutableFile(atPath: bundledHelper.path),
-              files.allSatisfy({ fileManager.isReadableFile(atPath: directory.appendingPathComponent($0).path) }) else {
+              let directory = searchDirectories.first(where: { directory in
+                  files.allSatisfy { fileManager.isReadableFile(atPath: directory.appendingPathComponent($0).path) }
+              }) else {
             return nil
         }
         return PrinterColorTables(directory: directory, helper: bundledHelper)

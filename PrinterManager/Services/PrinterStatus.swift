@@ -537,6 +537,26 @@ final class PrinterStatusMonitor: ObservableObject {
         self.timer = timer
     }
     
+    #if DEBUG
+    /// Ekran görüntüsü için: verilen durum kodunu (toner baytları gerçek okumadan) gösterir
+    func showDemo(code: [UInt8]) {
+        timer?.invalidate()
+        timer = nil
+        let toners = status.map { Array($0.code.dropFirst(4)) } ?? [0x4b, 0x5b, 0x05, 0x26]
+        status = PrinterStatusReader.decode(
+            code: Array(code.prefix(4)) + Array(repeating: 0x00, count: max(0, 4 - code.count)) + toners,
+            deviceID: "MFG:Samsung;CMD:SPLC;MDL:CLP-300;CLS:PRINTER;STATUS:BUSY;",
+            port: nil,
+            table: try? StatusTable.load()
+        )
+        hotSince = nil
+    }
+    
+    func endDemo() {
+        start()
+    }
+    #endif
+    
     func refresh() {
         guard !isLoading else { return }
         isLoading = true

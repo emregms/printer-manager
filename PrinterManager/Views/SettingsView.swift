@@ -143,7 +143,7 @@ struct SettingsView: View {
                 .disabled(settingsStore.driverMode != .own || !hasColorTables || printManager.isPrinting)
                 
                 if settingsStore.driverMode == .own && !hasColorTables {
-                    Text("Samsung sürücüsünün renk dosyaları bulunamadı (\(PrinterColorTables.directory.path)). Fotoğraf modu için Samsung'un CLP-300 sürücüsü kurulu olmalı.")
+                    Text("Fotoğraf modu için Samsung'un CLP-300 renk dosyaları bulunamadı; ayrıntı Kurulum Yardımcısı'nda.")
                         .font(.caption)
                         .foregroundColor(.orange)
                         .padding(.leading, 4)

@@ -58,6 +58,8 @@ struct DriverSettingsView: View {
 
 /// macOS sürücüsü: CLP-300'ü Yazıcılar ve Tarayıcılar'a ekler
 struct DriverInstallSection: View {
+    var title = "macOS Sürücüsü"
+    
     @State private var status: DriverInstaller.Status?
     @State private var selectedURI: String?
     @State private var isWorking = false
@@ -83,13 +85,13 @@ struct DriverInstallSection: View {
                         Text("Bulunamadı. Yazıcı açık ve USB'ye bağlı mı?")
                             .foregroundColor(.orange)
                     } else if status.deviceURIs.count == 1 {
-                        Text(status.deviceURIs[0])
+                        Text(ScreenshotMode.masked(status.deviceURIs[0]))
                             .font(.caption.monospaced())
                             .textSelection(.enabled)
                     } else {
                         Picker("", selection: $selectedURI) {
                             ForEach(status.deviceURIs, id: \.self) { uri in
-                                Text(uri).tag(uri as String?)
+                                Text(ScreenshotMode.masked(uri)).tag(uri as String?)
                             }
                         }
                         .labelsHidden()
@@ -136,7 +138,7 @@ struct DriverInstallSection: View {
                     .textSelection(.enabled)
             }
         } header: {
-            Text("macOS Sürücüsü")
+            Text(title)
         } footer: {
             Text("""
             Kurulunca CLP-300, Yazıcılar ve Tarayıcılar'da görünür; Samsung'un eski sürücüsü \
@@ -196,6 +198,8 @@ struct DriverInstallSection: View {
 
 /// Başka uygulamalardan PrinterManager'a belge getiren kısayollar
 struct OtherAppsSection: View {
+    var title = "Başka Uygulamalardan Yazdırma"
+    
     @State private var hasPDFService = PrintInbox.isPDFServiceInstalled
     @State private var opensAtLogin = PrintInbox.opensAtLogin
     @State private var message: String?
@@ -218,7 +222,7 @@ struct OtherAppsSection: View {
                     .textSelection(.enabled)
             }
         } header: {
-            Text("Başka Uygulamalardan Yazdırma")
+            Text(title)
         } footer: {
             Text("""
             PDF menüsü: herhangi bir uygulamada ⌘P → sol alttaki PDF ▾ → "PrinterManager ile Yazdır"; \
@@ -385,10 +389,21 @@ struct GhostscriptInstallView: View {
                     }
                 }
             } else {
-                Text("Homebrew kurulu değil. Önce brew.sh adresindeki komutla Homebrew'u, sonra Ghostscript'i kurun.")
-                    .font(.caption)
-                    .foregroundColor(.orange)
-                Link("brew.sh", destination: URL(string: "https://brew.sh")!)
+                HStack {
+                    Button("Terminal'de Kur (Homebrew + Ghostscript)") {
+                        openInstallerInTerminal()
+                    }
+                    Button("Tekrar Kontrol Et", action: onFinished)
+                }
+                Text("""
+                Homebrew bu Mac'te yok. Düğme Terminal'de resmi Homebrew kurulumunu ve ardından \
+                Ghostscript'i başlatır: Mac şifrenizi sorar, Enter ister ve 5–10 dakika sürer. \
+                "Bitti" yazınca buraya dönüp Tekrar Kontrol Et'e basın.
+                """)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                Link("Homebrew hakkında: brew.sh", destination: URL(string: "https://brew.sh")!)
                     .font(.caption)
             }
             
@@ -399,6 +414,36 @@ struct GhostscriptInstallView: View {
                     .lineLimit(4)
                     .textSelection(.enabled)
             }
+        }
+    }
+    
+    /// Homebrew yoksa: resmi kurulum betiğini ve Ghostscript'i çalıştıran bir .command
+    /// dosyası yazıp Terminal'de açar (şifre ve onay kullanıcıdan istenir)
+    private func openInstallerInTerminal() {
+        let script = """
+        #!/bin/bash
+        echo "PrinterManager: Homebrew ve Ghostscript kuruluyor."
+        echo "Homebrew kurulumu Mac şifrenizi ve Enter tuşunu isteyebilir."
+        echo
+        if [ ! -x /opt/homebrew/bin/brew ] && [ ! -x /usr/local/bin/brew ]; then
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || exit 1
+        fi
+        BREW=/opt/homebrew/bin/brew
+        [ -x "$BREW" ] || BREW=/usr/local/bin/brew
+        "$BREW" install ghostscript || exit 1
+        echo
+        echo "Bitti. PrinterManager'a dönüp Tekrar Kontrol Et'e basın; bu pencereyi kapatabilirsiniz."
+        """
+        let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("PrinterManager")
+        let url = directory.appendingPathComponent("Ghostscript Kur.command")
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try script.write(to: url, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
+            NSWorkspace.shared.open(url)
+        } catch {
+            output = "Kurulum betiği yazılamadı: \(error.localizedDescription)"
         }
     }
     
@@ -473,7 +518,7 @@ struct DriverToolStatusView: View {
                 Text(text)
                     .font(.caption.weight(.medium))
                 if showPaths, let path = path {
-                    Text(path.path)
+                    Text(ScreenshotMode.masked(path.path))
                         .font(.caption2.monospaced())
                         .foregroundColor(.secondary)
                         .lineLimit(1)
