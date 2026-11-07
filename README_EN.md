@@ -4,121 +4,127 @@
 
 [![TR](https://img.shields.io/badge/lang-TR-red.svg)](README.md)
 [![EN](https://img.shields.io/badge/lang-EN-blue.svg)](README_EN.md)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-black.svg)](#requirements)
+[![Apple Silicon + Intel](https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-universal-blue.svg)](#requirements)
 
 </div>
 
-A native macOS application that prevents laser printer transfer belt wear. Adds configurable delays between pages when printing multi-page PDFs, preventing the transfer belt from overheating and premature wear.
+**A macOS driver and printing app for the Samsung CLP-300.** It replaces Samsung's 2008 Mac driver, which crashes on Apple Silicon: the app prepares each page itself and sends it straight to the printer. On printers with a worn transfer belt cleaner, each page is sent only after the printer has printed the previous one and cleaned the belt. Double feeds, photo printing, toner, error codes and the printer staying hot while idle are all handled in one window.
 
-> 🧪 **Tested:** With Samsung CLP-300, compatible with all laser printers experiencing similar issues.
+The app's interface is in Turkish; the English names are given in parentheses below.
 
-![App Screenshot](screenshots/1.png)
+![PrinterManager main window](screenshots/main.png)
 
 ## 📥 Download
 
-**[⬇️ Download PrinterManager v1.0.0 DMG](https://github.com/emregms/printer-manager/releases/download/v1.0.0/PrinterManager-v1.0.0.dmg)**
+**[⬇️ PrinterManager v2.0.0 (DMG, 3.6 MB)](https://github.com/emregms/printer-manager/releases/download/v2.0.0/PrinterManager-v2.0.0.dmg)** · [All releases](https://github.com/emregms/printer-manager/releases)
 
-### ⚠️ macOS Security Warning on First Launch
+Runs on Intel and Apple Silicon Macs (macOS 13 Ventura or later).
 
-macOS blocks unsigned applications. To open the app:
+## 🚀 Setting Up a New Mac
 
-**Method 1 - Terminal (Recommended):**
+Samsung's old driver is **not needed**. It takes 5–10 minutes, once.
 
-```bash
-xattr -cr /Applications/PrinterManager.app
-```
-
-**Method 2 - Manual:**
-
-1. **Right-click** on the app (or Control+click)
-2. Select **"Open"**
-3. Click **"Open"** in the dialog
-
-## Features
-
-- **Own Driver (Samsung CLP-300)**: Instead of the old Samsung driver in macOS, the app prepares each page itself (Ghostscript + foo2qpdl) and sends it to the printer raw. Dense, colour and vector-heavy pages print reliably
-- **Printer Status and Toner**: The status the printer reports over USB (paper jam, cover open, toner low, waste toner full…) with an explanation, plus each toner's level and cartridge number
-- **Smart Page Pacing**: The next page is sent once the printer has printed the page and cleaned the belt; no fixed delay needed. If status can't be read, a single "Bekleme Süresi" (wait) is used
-- **Print Queue and Double Feeds**: See what is printing now and what comes next; on a double feed, reprint the same page with one click, or reprint spoiled sheets duplex after the series
-- **Fuser and Sleep**: See whether the printer is hot or asleep, and set how many idle minutes before it sleeps
-- **Drag and Drop**: Drag a PDF from Finder onto the window to open it
-- **Photo Mode**: Photos are printed with the colour table and halftone screens Samsung made for the CLP-300; open shadows, natural colours
-- **Page-by-Page Printing**: Each page sent separately to printer
-- **Manual Duplex**: Odd pages → Flip → Even pages reversed
-- **PDF Preview**: Thumbnail grid for all pages
-- **Pause/Resume**: Pause and continue printing anytime
-- **Time Estimate**: See remaining print time
-- **Grayscale Mode**: Faster and more economical
-- **Native macOS**: Swift + SwiftUI, Apple Silicon optimized
-
-## Screenshots
-
-<p align="center">
-  <img src="screenshots/2.png" alt="Printing Progress" width="800"/>
-  <br/>
-  <em>Page-by-page printing with progress tracking</em>
-</p>
-
-<p align="center">
-  <img src="screenshots/3.png" alt="Duplex Printing" width="800"/>
-  <br/>
-  <em>Duplex printing - flip pages prompt</em>
-</p>
-
-## Requirements
-
-- macOS 13.0 (Ventura) or later
-- Intel or Apple Silicon (M1/M2/M3)
-- For the own driver: [Ghostscript](https://www.ghostscript.com) (via Homebrew)
-
-## Setting Up a New Mac (from scratch)
-
-Samsung's old driver is **not needed**. You only do this once:
-
-1. **Ghostscript:** if you don't have Homebrew, install it with the command on [brew.sh](https://brew.sh), then:
+1. **Open the DMG** and drag PrinterManager to the **Applications** folder next to it.
+2. **Allow the first launch.** The app is not signed by Apple, so macOS blocks it the first time. Run once in Terminal:
 
    ```bash
-   brew install ghostscript
+   xattr -cr /Applications/PrinterManager.app
    ```
 
-   If Homebrew is installed, the **Ghostscript'i Kur** (Install Ghostscript) button in the app's Settings window does this too.
-2. **App:** put PrinterManager in `/Applications` and open it (see the first-launch macOS warning steps above).
-3. **Printer:** connect the CLP-300 over USB and turn it on. In PrinterManager choose **Settings (⌘,) → macOS Sürücüsü → Sürücüyü Kur ve Yazıcıyı Ekle** (Install driver and add printer) and enter your admin password in the macOS prompt. The printer is added to Printers & Scanners as "Samsung CLP-300".
-4. **Optional**, in the "Başka Uygulamalardan Yazdırma" (Printing from other apps) section of the same window:
-   - Add "PrinterManager ile Yazdır" to the PDF menu of print dialogs.
-   - Turn on launch at login, so documents sent from other apps arrive right away.
+   Without Terminal: try to open the app, close the warning, then click **Open Anyway** at the bottom of **System Settings → Privacy & Security** and enter your Mac password.
+3. **Connect the CLP-300 over USB and turn it on**, then open PrinterManager. The **Setup Assistant** (Kurulum Yardımcısı) opens by itself:
+   - **1. Ghostscript:** One button. With Homebrew, Ghostscript is installed directly. Without Homebrew, Terminal opens and installs Homebrew, then Ghostscript; it asks for your Mac password and Enter once.
+   - **2. Printer and Driver:** **Sürücüyü Kur ve Yazıcıyı Ekle** (install driver and add printer) → your Mac password. The printer appears in Printers & Scanners as "Samsung CLP-300".
+   - **3. Optional:** add "PrinterManager ile Yazdır" to the PDF menu of the print dialog; turn on "open at login".
+   - **4. Photo Mode:** can be turned on if Samsung's colour files are found ([details](#photo-mode)).
+4. **Done.** Drag a PDF onto the window and click **Yazdır** (Print).
 
-In the **Sürücü** (Driver) section of the side panel, "Ghostscript" and "foo2qpdl" should both show a green check. foo2qpdl needs no separate install; it ships inside the app.
+<p align="center">
+  <img src="screenshots/setup.png" alt="Setup Assistant" width="560"/>
+  <br/>
+  <em>Setup Assistant: the missing steps in one window; green ticks are done</em>
+</p>
 
-If the printer is already set up on this Mac with Samsung's old driver, that queue is left alone and a second printer named "Samsung CLP-300 (PrinterManager)" is added next to it. The app sends pages to either one unfiltered with `lp -o raw`.
+Open the Setup Assistant again later from **PrinterManager menu → Kurulum Yardımcısı…**. If the printer is already added on this Mac with Samsung's old driver, that queue is left alone; a second printer "Samsung CLP-300 (PrinterManager)" is added next to it.
+
+<details>
+<summary>Manual setup (Terminal)</summary>
+
+```bash
+# Without Homebrew: https://brew.sh
+brew install ghostscript
+```
+
+Then in PrinterManager: **Settings (⌘,) → macOS Sürücüsü (macOS driver) → Sürücüyü Kur ve Yazıcıyı Ekle**.
+
+</details>
+
+## ✨ Features
+
+**Printing**
+- **Own driver:** Ghostscript + foo2qpdl prepare each page and it goes to the printer raw. Dense, colour and vector-heavy pages print reliably.
+- **Smart page pacing:** The next page is sent once the printer has printed the page and cleaned the belt. No fixed delay; a cold printer takes longer for the first page, a warm one less.
+- **Stops on errors:** On a paper jam, open cover, no paper and so on, sending stops and the queue doesn't fill up; it continues where it stopped once fixed.
+- **Photo mode:** Photos are printed with the colour table and halftone screens Samsung made for the CLP-300; open shadows, natural colours.
+- **Manual duplex:** odd pages first, flip the paper, even pages in reverse order.
+- **Grayscale**, three qualities (600, 1200x600, 1200x1200 dpi).
+
+**Monitoring and intervening**
+- **Print queue:** the page printing now and the ones coming next, with thumbnails; pause, resume, cancel.
+- **Double feeds:** on a front side, one click prints the same page again; on a back side, the two ruined sheets are reprinted on both sides after the series. Undoable.
+- **Printer status and toner:** the status and error codes the printer reports over USB, with an explanation, plus each toner's level and cartridge number.
+- **Fuser and sleep:** see whether the printer is hot or asleep while idle, and set how many minutes before it sleeps.
+
+**Convenience**
+- **From any app:** Safari, Preview, Word… "Print" opens the document in PrinterManager.
+- **Drag and drop**, PDF preview, time remaining.
+- **Setup Assistant**, Intel + Apple Silicon, Swift + SwiftUI.
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="screenshots/printing.png" alt="Print queue and a double-feed intervention" width="820"/>
+  <br/>
+  <em>Print queue: the back of page 4 is printing; sheet 5/6, marked spoiled, will be reprinted on both sides at the end</em>
+</p>
+
+<p align="center">
+  <img src="screenshots/settings.png" alt="Settings: driver, other apps, power save" width="420"/>
+  <br/>
+  <em>Settings (⌘,): tool paths, macOS driver, printing from other apps, the printer's sleep time</em>
+</p>
+
+## Usage
+
+1. **Printer** (Yazıcı) → "Samsung CLP-300" (added by the PrinterManager driver).
+2. **Page pacing** (Sayfa Geçişi) → "Akıllı" (smart, recommended). With "Sabit süre" (fixed) you set one wait (default 38 s).
+3. **Duplex / Grayscale / Photo Mode** (Çift Yönlü / Siyah Beyaz / Fotoğraf Modu) → as needed.
+4. **Driver and quality** → "Kendi sürücü (önerilen)" (own driver), 1200x600 dpi (600 dpi is faster, 1200x1200 is finest).
+5. **PDF** → drag it onto the window or pick it in the left panel.
+6. **Print** (Yazdır) → follow it in "Baskı Sırası" (print queue).
+
+Advanced settings (⌘, or the button next to the Driver heading): Ghostscript and foo2qpdl paths, raw queue name, the printer's power save. Paths left empty are found automatically.
 
 ## Printing from Other Apps
 
-The transfer belt cleaner is broken, so this printer needs a delay between pages on every job. That's why apps like Safari or Preview don't print to it directly; the document opens in PrinterManager instead, which prints it with the delay (and manual duplex if you want):
+This printer's worn transfer belt cleaner needs a wait after every page. So Safari, Preview and other apps don't print to it directly; the document opens in PrinterManager and is printed from there with the waits (and manual duplex if wanted):
 
-- **By choosing the printer:** in the print dialog pick "Samsung CLP-300" (the one added by the PrinterManager driver) and click **Print**. The print queue briefly shows "PrinterManager'da açılıyor…" (opening in PrinterManager); within a few seconds PrinterManager takes the document, deletes the job and opens it in its window. No data is sent to the printer. If the app is closed, the job stops after 30 seconds with "PrinterManager açık değil" (PrinterManager is not open); the document arrives when you open PrinterManager.
-- **From the PDF menu:** in any print dialog, **PDF ▾ → PrinterManager ile Yazdır** at the bottom left. Whatever printer is selected, the document opens in PrinterManager.
-- **From Finder:** right-click a PDF → **Open With → PrinterManager**.
+- **By choosing the printer:** In the print dialog, choose "Samsung CLP-300" (added by the PrinterManager driver) and click **Print**. The print queue briefly shows "PrinterManager'da açılıyor…" (opening in PrinterManager); within a few seconds PrinterManager takes the document, deletes the job and opens it in its window. No data goes to the printer. If the app isn't running, the job stops after 30 seconds with "PrinterManager açık değil" (not open); open PrinterManager and the document arrives.
+- **From the PDF menu:** In any print dialog, bottom left **PDF ▾ → PrinterManager ile Yazdır**. Whatever printer is selected, the document opens in PrinterManager.
+- **From Finder:** drag the PDF onto the window, or right-click it → **Open With → PrinterManager**.
+
 ### Why?
 
-Samsung's last Mac driver for the CLP-300 dates from 2008 and runs under Rosetta on Apple Silicon. Its `rastertosec` filter crashes on dense or colour pages (`JBIGClipColorFullPage`, SIGSEGV). The queue shows "Filter failed", and when the printer receives the truncated data it prints a `SPL-C ERROR - Including Corrupted Data` page.
+Samsung's last Mac driver for the CLP-300 dates from 2008 and runs under Rosetta on Apple Silicon. Its `rastertosec` filter crashes on dense or colour pages (`JBIGClipColorFullPage`, SIGSEGV). The queue shows "Filter failed", and the printer, receiving truncated data, prints a `SPL-C ERROR - Including Corrupted Data` page. HP no longer offers a macOS driver for this printer.
 
 The own driver bypasses that filter completely:
 
 ```
-PDF page → Ghostscript (bitcmyk / pbmraw) → foo2qpdl -z0 -p2 → lp -o raw → printer
+PDF page → Ghostscript → [clp300-raster] → foo2qpdl -z0 -p2 → lp -o raw → printer
 ```
 
-The parameters are taken verbatim from the `foo2qpdl-wrapper` script of the foo2zjs project, which Linux has used for the CLP-300 for years (A4, 1200x600 dpi). Each page is rendered from the PDF itself; landscape and Letter pages are fitted to A4.
-
-## Usage
-
-1. **Select Printer** → Choose from dropdown
-2. **Page Pacing ("Sayfa Geçişi")** → "Akıllı" (smart, recommended). With "Sabit süre" (fixed) you set one wait (default 38 s)
-3. **Driver and Quality** → "Kendi sürücü (önerilen)" (own driver), quality 1200x600 dpi (600 dpi is faster with less data, 1200x1200 is best)
-4. **Drag or Select a PDF** → Drop the file on the window or pick it in the left panel
-5. **Print** → Follow it in "Baskı Sırası" (print queue)
-
-Advanced settings (⌘, or the button next to the Driver heading): Ghostscript and foo2qpdl paths, raw queue name. Left empty, they are found automatically.
+The parameters are taken one-to-one from the `foo2qpdl-wrapper` script of the foo2zjs project, used for the CLP-300 on Linux for years (A4, 1200x600 dpi). Each page is rendered from the PDF itself; landscape and Letter pages are fitted to A4. `clp300-raster` only joins in photo mode.
 
 ## Print Queue and Double Feeds
 
@@ -131,7 +137,7 @@ The printer sometimes pulls two sheets at once:
 - **A sheet printed earlier came out bad:** use **Kağıt Bozuk, Sona Ekle** (sheet spoiled, add to end) from that row's menu.
 - **Geri Al** (undo) reverts the last intervention until the next page starts. You are asked before reprints start and can skip them.
 
-In smart mode each page is sent once the printer has printed the previous one, cleaned the belt and is Ready again. A cold printer takes longer for the first page; the remaining time is estimated from the recent pages.
+In smart mode each page is sent once the printer has printed the previous one, cleaned the belt and is Ready again. A cold printer takes longer for the first page; the remaining time is estimated from the recent pages. Pages are also sent to a sleeping printer, which wakes up by itself.
 
 ## Photo Mode
 
@@ -141,7 +147,12 @@ In the standard colour path, Ghostscript converts with a generic CMYK profile an
 - The `clp300-raster` helper runs each pixel through Samsung's CLP-300 colour table (17×17×17 RGB → CMYK) and turns each colour into dots with Samsung's halftone screen for that resolution. The screens account for the printer's dot gain; mid greys are made from CMY, black only joins in dark tones.
 - foo2qpdl encodes the result for the printer as usual.
 
-These files are installed with Samsung's Mac driver in `/Library/Printers/Samsung/CLP-300`. They are not in the repo or the app; they are read in place at run time. If the Samsung driver isn't installed, the switch stays off and says why.
+**Colour files:** these come with Samsung's old CLP-300 Mac driver. They are **not** in the repo or the app; they are read in place at run time. The app looks in two places:
+
+- `/Library/Printers/Samsung/CLP-300` (where Samsung's driver installs them)
+- `~/Library/Application Support/PrinterManager/CLP-300` (no admin rights needed)
+
+HP no longer offers a macOS driver for this printer. If you have a Mac with Samsung's driver installed, put its `CLP-300` folder in the second place on the new Mac. Without the files everything works; only Photo Mode stays off and says why.
 
 For photos, **1200x600 dpi** is recommended: a full-page A4 photo is ~6.7 MB. At 1200x1200 it is ~13 MB and you are asked before it is sent.
 
@@ -163,7 +174,7 @@ Toner cannot be reset: the chip in each cartridge keeps its own level.
 
 The CLP-300 keeps its fuser hot after every job and only sleeps when its power-save timer runs out. A chip on the status card shows it: **Fırın sıcak** (hot; uses power while idle, and when the sleep time is known, at most how many minutes until it sleeps), **Fırın ısınıyor** (warming), **Fırın soğuk** (asleep).
 
-To shorten it: Settings (⌘,) → **Yazıcı Güç Tasarrufu**, pick 5–120 min and press **Yazıcıya Uygula** (apply to printer). The printer was set to 10 min; 5 min is the minimum. The value is stored in the printer and **takes effect after the printer is turned off and on**. A sleeping printer wakes by itself when a job arrives; the first page starts a bit later while it warms up.
+To shorten it: Settings (⌘,) → **Yazıcı Güç Tasarrufu**, pick 5–120 min and press **Yazıcıya Uygula** (apply to printer). The printer we tested was set to 10 min; 5 min is the minimum. The value is stored in the printer and **takes effect after the printer is turned off and on**. A sleeping printer wakes by itself when a job arrives; the first page starts a bit later while it warms up.
 
 The setting is read and written with PJL commands over the printer's USB interface. The helper only allows read commands and the two power-save settings. It can't be changed while printing, because the printer is busy.
 
@@ -173,18 +184,27 @@ The app's messages are in Turkish; the English meaning is given here.
 
 | Message | What to do |
 |---|---|
-| "Ghostscript bulunamadı" (not found) | `brew install ghostscript`. If it lives elsewhere, enter its path in Settings (⌘,). |
+| "PrinterManager can't be opened / is damaged" | The first launch wasn't allowed: `xattr -cr /Applications/PrinterManager.app`, or System Settings → Privacy & Security → **Open Anyway**. |
+| "Ghostscript bulunamadı" (not found) | The button in the Setup Assistant, or `brew install ghostscript`. If it lives elsewhere, enter its path in Settings (⌘,). |
+| "USB'deki yazıcı: Bulunamadı" (no printer on USB) | Turn the printer on and check the USB cable, then press refresh in the Setup Assistant. |
 | "Yazıcı kuyruğu durdurulmuş" (queue stopped) | System Settings > Printers & Scanners > Print Queue > Resume, or `cupsenable Samsung_CLP_300 && cupsaccept Samsung_CLP_300` |
 | "Kuyrukta bekleyen iş var" (pending jobs) | Delete old stuck jobs in the Print Queue window (`cancel -a Samsung_CLP_300`). |
 | "Yazıcı kapalı görünüyor" (printer offline) | Turn the printer on and check the USB cable. While printing, the app waits until the printer is ready. |
 | "Sayfa N çok büyük" (page N too large) | The page data is over 8 MB (normal: 1–4 MB). "600 dpi ile Gönder" roughly halves it. |
 | Printer prints an `SPL-C ERROR` page | Make sure the driver mode is "Kendi sürücü"; "Sistem sürücüsü" (system driver) causes this error. If it persists, set quality to 600 dpi. |
-| Printing from Safari doesn't open the document in PrinterManager | Is PrinterManager running? Is the printer added by the PrinterManager driver selected in the print dialog? Settings → macOS Sürücüsü should say "Kurulu" (installed); if you installed with an older version, click **Sürücüyü Güncelle** (Update driver). |
+| Printing from Safari doesn't open the document in PrinterManager | Is PrinterManager running? Is the printer added by the PrinterManager driver selected in the print dialog? The Setup Assistant should show the driver as "Kurulu" (installed); if you installed with an older version, click **Sürücüyü Güncelle** (update driver). |
 | Print queue shows "PrinterManager açık değil" (not open) | Open PrinterManager; within a few seconds it takes the stopped job and opens the document. |
+| Photo Mode can't be turned on | Samsung's colour files weren't found; see [Photo Mode](#photo-mode). |
 | Power-save time did not change | It takes effect when the printer starts: turn it off and on. In Settings, the "Şu an" (current) line should show the new time. |
 | Need details | The print log shows each page's size, time and any Ghostscript warnings. |
 
 The "Sistem sürücüsü" (system driver) mode remains in settings as the old path (splits with PDFKit, sends with `lp`); use it only as a fallback.
+
+## Requirements
+
+- macOS 13 (Ventura) or later; Intel or Apple Silicon
+- Samsung CLP-300 connected over USB
+- [Ghostscript](https://www.ghostscript.com) (the Setup Assistant installs it with Homebrew)
 
 ## Build from Source
 
@@ -192,19 +212,27 @@ The "Sistem sürücüsü" (system driver) mode remains in settings as the old pa
 git clone https://github.com/emregms/printer-manager.git
 cd printer-manager
 open PrinterManager.xcodeproj
-# Press ⌘+R to run
+# Press ⌘R to run
 ```
 
-During the build, two helper programs are compiled and placed in the app bundle (`Contents/Helpers/`):
+The build compiles the helpers and puts them in the app bundle (`Contents/Helpers/`):
 
 - `foo2qpdl`: from the source in `ThirdParty/foo2qpdl`.
-- `cups-jobs`: from `Driver/cups-jobs.c`. It lists jobs sent to the queue, fetches their documents and deletes the job.
-- `clp300-status`: from `Driver/clp300-status.c`. It reads the printer's status, toner levels and status table over USB.
+- `cups-jobs`: from `Driver/cups-jobs.c`. Lists jobs that arrive in the queue, fetches their documents and deletes the job.
+- `clp300-status`: from `Driver/clp300-status.c`. Reads the printer's status, toners and status table over USB; sets power save with PJL.
+- `clp300-raster`: from `Driver/clp300-raster.c`. In photo mode, turns the raster into dots with Samsung's colour table.
 
 The printer queue's files (`pminbox` filter, PPD, `install-driver.sh`) are in `Driver/`.
+
+Scripts:
+
+- `Scripts/make-dmg.sh`: builds Release (Intel + Apple Silicon) and makes `build/PrinterManager-v<version>.dmg`.
+- `Scripts/screenshots.sh`: regenerates the screenshots on this page. A Debug build opens with a sample document and draws its own windows; nothing is sent to the printer (needs Python + Pillow).
 
 ## License
 
 [MIT](LICENSE) - Hüseyin Emre Gümüş (info@hegg.tr)
 
-The bundled **foo2qpdl** is not covered by that license: it comes from the foo2zjs project (Rick Richardson; JBIG code by Markus Kuhn) and is licensed under the **GPL-2.0**. The source is Debian's `foo2zjs_20200505dfsg0` package (the original site is no longer online). The app runs it as a separate program; none of its code is copied into the Swift sources. The unmodified source code, the license text (`COPYING`) and its provenance are in [ThirdParty/foo2qpdl](ThirdParty/foo2qpdl). The license text also ships in the app bundle as `Contents/Resources/foo2qpdl-COPYING.txt`.
+The bundled **foo2qpdl** is not covered by that license: it comes from the foo2zjs project (Rick Richardson; JBIG code by Markus Kuhn) and is licensed under **GPL-2.0**. The source is Debian's `foo2zjs_20200505dfsg0` package (the original site is offline). The app runs it as a separate program; none of its code is copied into Swift. The unmodified source, the license text (`COPYING`) and where it came from are in [ThirdParty/foo2qpdl](ThirdParty/foo2qpdl). The license text is also in the app bundle as `Contents/Resources/foo2qpdl-COPYING.txt`.
+
+**Ghostscript** (AGPL) is not distributed with the app; it is installed separately on the user's Mac with Homebrew. Samsung's colour table and halftone files are not distributed either; Photo Mode reads them where they are on the user's Mac.
