@@ -53,8 +53,9 @@ struct PrintProgressView: View {
                 .buttonStyle(.bordered)
                 .tint(printManager.isPaused ? .green : .orange)
                 
-                if let current = printManager.currentPage {
-                    Text("\(current) / \(printManager.totalPages)")
+                // Biten adım / toplam adım (yeniden basımlar dahil)
+                if let queue = printManager.queue {
+                    Text("\(min(queue.finishedCount + 1, queue.steps.count)) / \(queue.steps.count)")
                         .font(.title3.bold())
                         .foregroundColor(.accentColor)
                 }
@@ -74,8 +75,8 @@ struct PrintProgressView: View {
                                 LinearGradient(
                                     colors: printManager.isPaused
                                         ? [.gray, .gray.opacity(0.7)]
-                                        : (printManager.isCleaningPhase 
-                                            ? [.orange, .yellow] 
+                                        : (printManager.isCleaningPhase
+                                            ? [.orange, .yellow]
                                             : [.blue, .cyan]),
                                     startPoint: .leading,
                                     endPoint: .trailing
@@ -113,7 +114,7 @@ struct PrintProgressView: View {
             }
             
             // Genel ilerleme ve tahmini süre
-            let overallProgress = Double(printManager.currentPage ?? 0) / Double(max(1, printManager.totalPages))
+            let overallProgress = Double(printManager.queue?.finishedCount ?? 0) / Double(max(1, printManager.queue?.steps.count ?? 1))
             
             HStack(spacing: 12) {
                 Text("Genel İlerleme")

@@ -8,21 +8,14 @@ class SettingsStore: ObservableObject {
         didSet { save() }
     }
     
-    @Published var printDelaySeconds: Int = 30 {
-        didSet { save() }
-    }
-    
-    @Published var cleanDelaySeconds: Int = 8 {
-        didSet { save() }
-    }
-    
     /// Sayfalar arası: yazıcının durumuna göre (akıllı) ya da sabit süre
     @Published var pageTimingMode: PageTimingMode = .smart {
         didSet { save() }
     }
     
-    /// Akıllı modda yazıcı "Hazır" olduktan sonra ek bekleme
-    @Published var extraWaitSeconds: Int = 2 {
+    /// Sabit modda sayfalar arası bekleme (baskı + kayış temizliği). Akıllı modda
+    /// yazıcı durumu okunamazsa yedek olarak kullanılır.
+    @Published var pageWaitSeconds: Int = 38 {
         didSet { save() }
     }
     
@@ -80,7 +73,7 @@ class SettingsStore: ObservableObject {
         static let printDelaySeconds = "printDelaySeconds"
         static let cleanDelaySeconds = "cleanDelaySeconds"
         static let pageTimingMode = "pageTimingMode"
-        static let extraWaitSeconds = "extraWaitSeconds"
+        static let pageWaitSeconds = "pageWaitSeconds"
         static let duplexEnabled = "duplexEnabled"
         static let grayscaleMode = "grayscaleMode"
         static let driverMode = "driverMode"
@@ -104,14 +97,16 @@ class SettingsStore: ObservableObject {
         
         selectedPrinter = defaults.string(forKey: Keys.selectedPrinter)
         
-        let savedPrintDelay = defaults.integer(forKey: Keys.printDelaySeconds)
-        printDelaySeconds = savedPrintDelay > 0 ? savedPrintDelay : 30
-        
-        let savedCleanDelay = defaults.integer(forKey: Keys.cleanDelaySeconds)
-        cleanDelaySeconds = savedCleanDelay > 0 ? savedCleanDelay : 8
-        
         pageTimingMode = defaults.string(forKey: Keys.pageTimingMode).flatMap(PageTimingMode.init(rawValue:)) ?? .smart
-        extraWaitSeconds = defaults.object(forKey: Keys.extraWaitSeconds) as? Int ?? 2
+        
+        // Eski iki ayardan (yazdırma + temizlik süresi) tek bekleme süresine geçiş
+        if let saved = defaults.object(forKey: Keys.pageWaitSeconds) as? Int, saved > 0 {
+            pageWaitSeconds = saved
+        } else {
+            let print = defaults.integer(forKey: Keys.printDelaySeconds)
+            let clean = defaults.integer(forKey: Keys.cleanDelaySeconds)
+            pageWaitSeconds = print + clean > 0 ? print + clean : 38
+        }
         
         duplexEnabled = defaults.bool(forKey: Keys.duplexEnabled)
         grayscaleMode = defaults.bool(forKey: Keys.grayscaleMode)
@@ -127,10 +122,8 @@ class SettingsStore: ObservableObject {
         guard !isLoading else { return }
         
         defaults.set(selectedPrinter, forKey: Keys.selectedPrinter)
-        defaults.set(printDelaySeconds, forKey: Keys.printDelaySeconds)
-        defaults.set(cleanDelaySeconds, forKey: Keys.cleanDelaySeconds)
         defaults.set(pageTimingMode.rawValue, forKey: Keys.pageTimingMode)
-        defaults.set(extraWaitSeconds, forKey: Keys.extraWaitSeconds)
+        defaults.set(pageWaitSeconds, forKey: Keys.pageWaitSeconds)
         defaults.set(duplexEnabled, forKey: Keys.duplexEnabled)
         defaults.set(grayscaleMode, forKey: Keys.grayscaleMode)
         defaults.set(driverMode.rawValue, forKey: Keys.driverMode)

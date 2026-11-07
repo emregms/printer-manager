@@ -98,6 +98,7 @@ struct ContentView: View {
                     // Güvenlik kapsamlı erişim
                     if url.startAccessingSecurityScopedResource() {
                         selectedPDF = url
+                        printManager.clearQueue()
                         printManager.addLog("PDF yüklendi: \(url.lastPathComponent)")
                         
                         // Sayfa sayısını al
@@ -118,7 +119,7 @@ struct ContentView: View {
                 printManager.cancel()
             }
         } message: {
-            Text("Tek numaralı sayfalar yazdırıldı.\nLütfen kağıtları ters çevirip yazıcıya yükleyiniz.")
+            Text(printManager.flipMessage)
         }
         .onReceive(printManager.$showFlipPagesDialog) { show in
             showFlipPagesAlert = show
@@ -154,12 +155,10 @@ struct ContentView: View {
             await printManager.startPrinting(
                 pdf: pdfURL,
                 printer: printer,
-                printDelay: TimeInterval(settingsStore.printDelaySeconds),
-                cleanDelay: TimeInterval(settingsStore.cleanDelaySeconds),
+                pageWait: TimeInterval(settingsStore.pageWaitSeconds),
                 duplex: settingsStore.duplexEnabled,
                 grayscale: settingsStore.grayscaleMode,
                 timing: settingsStore.pageTimingMode,
-                extraWait: TimeInterval(settingsStore.extraWaitSeconds),
                 driver: settingsStore.driverSettings
             )
         }
@@ -171,6 +170,7 @@ struct ContentView: View {
         
         selectedPDF?.stopAccessingSecurityScopedResource()
         selectedPDF = document.url
+        printManager.clearQueue()
         PrintInbox.shared.markTaken(document)
         
         printManager.addLog("PDF yüklendi: \(document.title) (\(document.source))")
@@ -183,6 +183,7 @@ struct ContentView: View {
         selectedPDF?.stopAccessingSecurityScopedResource()
         selectedPDF = nil
         printManager.clearLogs()
+        printManager.clearQueue()
         
         // Temp dosyalarını temizle
         Task {

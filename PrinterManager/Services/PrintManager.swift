@@ -21,13 +21,26 @@ class PrintManager: ObservableObject {
     @Published var pauseReason: String?
     /// Sayfa geçişi yazıcının durumuna göre (süreler tahmin)
     @Published var usesSmartTiming: Bool = false
+    /// Baskı sırası: geçişler ve adımlar. İş bitince gözden geçirmek için kalır.
+    @Published private(set) var queue: PrintQueue?
+    /// Şu an basılan adım
+    @Published private(set) var currentStepID: UUID?
+    /// Kağıt çevirme / yükleme penceresinin metni
+    @Published private(set) var flipMessage = ""
+    /// Son müdahalenin açıklaması (sıra panelinde gösterilir)
+    @Published private(set) var lastIntervention: String?
+    /// Son müdahale, o sayfa bitmeden geri alınabilir
+    @Published private(set) var canUndoIntervention = false
+    
+    var currentStep: PrintStep? {
+        currentStepID.flatMap { queue?.step($0) }
+    }
     
     /// Tahmini kalan toplam süre (saniye)
     var estimatedTimeRemaining: TimeInterval {
-        guard isPrinting, let current = currentPage, totalPages > 0 else { return 0 }
-        let remainingPages = totalPages - current
-        let perPageTime = usesSmartTiming ? cycleEstimate + extraWait : printDelay + cleanDelay
-        return TimeInterval(remainingPages) * perPageTime + timeRemaining
+        guard isPrinting, let queue = queue else { return 0 }
+        let perPageTime = usesSmartTiming ? cycleEstimate : pageWait
+        return TimeInterval(queue.pendingCount) * perPageTime + timeRemaining
     }
     
     /// Akıllı modda bir sayfanın (baskı + temizlik) tahmini süresi: son ölçümlerin
@@ -49,11 +62,14 @@ class PrintManager: ObservableObject {
     private var promptContinuation: CheckedContinuation<PrintPrompt.Choice, Never>?
     private var pdfURL: URL?
     private var printerName: String = ""
-    private var printDelay: TimeInterval = 30
-    private var cleanDelay: TimeInterval = 8
-    private var extraWait: TimeInterval = 0
+    /// Sabit modda (ve akıllı modda durum okunamazsa) sayfalar arası bekleme
+    private var pageWait: TimeInterval = 38
     /// Akıllı modda ölçülen sayfa süreleri (gönderimden yeniden "Hazır"a)
     private var cycleDurations: [TimeInterval] = []
+    /// Yazıcıya gönderilmiş adımlar (iptalde basıldı sayılır)
+    private var sentStepIDs: Set<UUID> = []
+    /// Geri alma için müdahaleden önceki sıra
+    private var undoSnapshot: PrintQueue?
     private var isDuplex: Bool = false
     private var isGrayscale: Bool = false
     private var backend: PrintBackend?
@@ -64,22 +80,23 @@ class PrintManager: ObservableObject {
     func startPrinting(
         pdf: URL,
         printer: String,
-        printDelay: TimeInterval,
-        cleanDelay: TimeInterval,
+        pageWait: TimeInterval,
         duplex: Bool,
         grayscale: Bool = false,
         timing: PageTimingMode = .fixed,
-        extraWait: TimeInterval = 0,
         driver: DriverSettings
     ) async {
         guard !isPrinting else { return }
         
         self.pdfURL = pdf
         self.printerName = printer
-        self.printDelay = printDelay
-        self.cleanDelay = cleanDelay
-        self.extraWait = extraWait
+        self.pageWait = pageWait
         self.cycleDurations = []
+        self.sentStepIDs = []
+        self.undoSnapshot = nil
+        self.canUndoIntervention = false
+        self.lastIntervention = nil
+        self.queue = nil
         self.isDuplex = duplex
         self.isGrayscale = grayscale
         self.isCancelled = false
@@ -155,53 +172,29 @@ class PrintManager: ObservableObject {
             switch (timing, printerStatus) {
             case (.smart, .some):
                 usesSmartTiming = true
-                addLog("Sayfa geçişi: akıllı (her sayfa basılıp kayış temizlenince, +\(Int(extraWait)) sn)")
+                addLog("Sayfa geçişi: akıllı (her sayfa basılıp kayış temizlenince)")
             case (.smart, .none):
                 usesSmartTiming = false
-                addLog("⚠️ Yazıcı durumu okunamadı; sabit süre kullanılacak (\(Int(printDelay)) + \(Int(cleanDelay)) sn)")
+                addLog("⚠️ Yazıcı durumu okunamadı; sabit süre kullanılacak (\(Int(pageWait)) sn)")
             case (.fixed, _):
                 usesSmartTiming = false
-                addLog("Sayfa geçişi: sabit süre (\(Int(printDelay)) + \(Int(cleanDelay)) sn)")
+                addLog("Sayfa geçişi: sabit süre (\(Int(pageWait)) sn)")
             }
             
-            // Sayfa sırasını belirle
-            let pagesToPrint: [Int]
+            // Baskı sırası: çift yönde önce tek sayfalar (1, 3, 5...), kağıtlar
+            // çevrilince çift sayfalar ters sırada (..., 6, 4, 2)
+            let documentPages = PDFProcessor.shared.pageCount(of: pdf) ?? totalPages
+            queue = PrintQueue(documentPageCount: documentPages, sheetPageCount: totalPages, duplex: duplex)
             if duplex {
-                // İlk geçiş: tek sayfalar (1, 3, 5...)
-                pagesToPrint = Array(stride(from: 0, to: totalPages, by: 2))
-                addLog("Çift yönlü yazdırma - İlk geçiş: \(pagesToPrint.count) sayfa (tek sayfalar)")
-            } else {
-                // Tüm sayfalar
-                pagesToPrint = Array(0..<totalPages)
+                addLog("Çift yönlü yazdırma: önce \((totalPages + 1) / 2) ön yüz, sonra \(totalPages / 2) arka yüz")
             }
             
-            // Sayfaları yazdır
-            try await printPages(pageIndices: pagesToPrint, isSecondPass: false)
-            
-            // Çift yönlü ise ikinci geçiş
-            if duplex && !isCancelled {
-                // Kullanıcıya kağıtları çevirmesini söyle
-                showFlipPagesDialog = true
-                addLog("Kağıtları çevirmeniz bekleniyor...")
-                
-                await withCheckedContinuation { continuation in
-                    self.pendingDuplexContinuation = continuation
-                }
-                
-                if !isCancelled {
-                    // İkinci geçiş: çift sayfalar TERS SIRADA (son çift sayfadan ilke doğru)
-                    // Örnek: 6 sayfalı PDF için -> [5, 3, 1] indeksleri (sayfa 6, 4, 2)
-                    let evenPages = Array(stride(from: 1, to: totalPages, by: 2))
-                    let reversedEvenPages = evenPages.reversed().map { $0 } // Ters çevir
-                    addLog("Çift yönlü yazdırma - İkinci geçiş: \(reversedEvenPages.count) sayfa (çift sayfalar, ters sırada)")
-                    try await printPages(pageIndices: reversedEvenPages, isSecondPass: true)
-                }
-            }
+            try await runQueue()
             
             if !isCancelled {
                 addLog("✅ Tüm sayfalar yazdırıldı!")
             }
-        
+            
         } catch {
             addLog("❌ Hata: \(error.localizedDescription)")
         }
@@ -245,11 +238,49 @@ class PrintManager: ObservableObject {
         }
     }
     
-    /// Çift yönlü yazdırmada devam et
+    /// Kağıtlar çevrildi / yüklendi, sonraki geçişe devam et
     func continueWithEvenPages() {
         showFlipPagesDialog = false
         pendingDuplexContinuation?.resume()
         pendingDuplexContinuation = nil
+    }
+    
+    // MARK: - Interventions
+    
+    /// Adımda kullanılabilecek müdahaleler (tekrar yazdır, kağıt bozuk, çift kağıt)
+    func actions(for step: PrintStep) -> [PrintQueue.Action] {
+        guard isPrinting else { return [] }
+        return queue?.actions(for: step.id, currentStepID: currentStepID) ?? []
+    }
+    
+    /// Müdahaleyi uygular: sıra hemen değişir, sonraki gönderimde geçerli olur
+    func intervene(_ action: PrintQueue.Action, on step: PrintStep) {
+        guard var updated = queue else { return }
+        let snapshot = updated
+        guard let message = updated.apply(action, to: step.id) else { return }
+        queue = updated
+        undoSnapshot = snapshot
+        canUndoIntervention = true
+        lastIntervention = message
+        addLog("✋ \(message)")
+    }
+    
+    /// Son müdahaleyi geri alır (o sırada basılan sayfa bitmeden)
+    func undoIntervention() {
+        guard canUndoIntervention, let snapshot = undoSnapshot else { return }
+        queue = snapshot
+        undoSnapshot = nil
+        canUndoIntervention = false
+        lastIntervention = nil
+        addLog("↩︎ Son müdahale geri alındı")
+    }
+    
+    /// Yeni belge ya da sıfırlama: biten işin sırasını temizle
+    func clearQueue() {
+        guard !isPrinting else { return }
+        queue = nil
+        currentStepID = nil
+        lastIntervention = nil
     }
     
     /// Ekrandaki soruya verilen cevap
@@ -272,70 +303,128 @@ class PrintManager: ObservableObject {
     
     // MARK: - Private Methods
     
-    private func printPages(pageIndices: [Int], isSecondPass: Bool) async throws {
-        for (index, pageIndex) in pageIndices.enumerated() {
-            guard !isCancelled else { break }
-            
-            let pageNumber = pageIndex + 1
-            currentPage = pageNumber
-            isCleaningPhase = false
-            
-            // Hata ya da "yeniden gönder" seçilirse aynı sayfa tekrar denenir
-            pageLoop: while !isCancelled {
-                // 0) Yazıcı hata bildiriyorsa gönderme (kuyruk şişmesin); akıllı modda
-                //    önceki iş bitip yazıcı "Hazır" olana kadar da bekle
-                guard await waitUntilPrinterAccepts(pageNumber: pageNumber) else { break pageLoop }
-                
-                // 1) Gönder
-                var didSend = false
-                do {
-                    didSend = try await sendPage(at: pageIndex)
-                    if didSend {
-                        addLog("✓ Sayfa \(pageNumber) yazıcıya gönderildi")
-                    }
-                } catch {
-                    addLog("❌ Sayfa \(pageNumber) gönderilemedi: \(error.localizedDescription)")
-                    switch await ask(.sendFailed(page: pageNumber, error: error)) {
-                    case .proceed:
-                        continue pageLoop
-                    case .alternate:
-                        addLog("Sayfa \(pageNumber) atlandı")
-                    case .cancel:
-                        if !isCancelled {
-                            cancel()
-                        }
-                    }
-                    break pageLoop
+    /// Sıradaki adımları geçiş geçiş basar. Sıra baskı sırasında değişebilir
+    /// (tekrar yazdır, çift kağıt...): her adımda yeniden okunur.
+    private func runQueue() async throws {
+        var currentPass: Int?
+        while !isCancelled, let step = queue?.nextPendingStep {
+            if step.pass != currentPass, let pass = queue?.pass(step.pass) {
+                // İlk geçiş dışında: kağıtları çevir / yükle
+                if currentPass != nil {
+                    guard await preparePass(pass) else { continue }
                 }
-                
-                // Sayfa atlandıysa kağıt geçmedi, beklemeye gerek yok
-                guard didSend, !isCancelled else { break pageLoop }
-                
-                // 2) Bekle: sayfa basılsın, kayış temizlensin
-                if usesSmartTiming {
-                    switch await waitForPageCycle(pageNumber: pageNumber) {
-                    case .done, .cancelled:
-                        break pageLoop
-                    case .resend:
-                        addLog("Sayfa \(pageNumber) yeniden gönderiliyor")
-                        continue pageLoop
-                    }
+                addLog("▶︎ \(pass.title)")
+                currentPass = step.pass
+            }
+            try await printStep(step.id)
+        }
+        currentStepID = nil
+    }
+    
+    /// Geçişten önce kullanıcıdan kağıtları çevirmesini / yüklemesini ister.
+    /// Kullanıcı yeniden basımı atlarsa false.
+    private func preparePass(_ pass: PrintPass) async -> Bool {
+        switch pass.kind {
+        case .single, .fronts:
+            return true
+        case .backs, .reprintBacks:
+            flipMessage = pass.kind == .backs
+                ? "Tek numaralı sayfalar yazdırıldı.\nLütfen kağıtları ters çevirip yazıcıya yükleyiniz."
+                : "Yeniden basılan ön yüzler yazdırıldı.\nBu kağıtları ters çevirip yazıcıya yükleyiniz."
+            showFlipPagesDialog = true
+            addLog("Kağıtları çevirmeniz bekleniyor...")
+            await withCheckedContinuation { continuation in
+                self.pendingDuplexContinuation = continuation
+            }
+            return !isCancelled
+        case .reprintSingle, .reprintFronts:
+            let sheets = queue?.steps(inPass: pass.id).filter { $0.state == .pending }.count ?? 0
+            if await ask(.reprintStart(sheets: sheets, duplex: pass.kind == .reprintFronts)) == .proceed {
+                return true
+            }
+            queue?.skipPending(inPass: pass.id, note: "Yeniden basım atlandı")
+            if pass.kind == .reprintFronts {
+                queue?.skipPending(inPass: pass.id + 1, note: "Yeniden basım atlandı")
+            }
+            addLog("Yeniden basım atlandı")
+            return false
+        }
+    }
+    
+    /// Tek bir adımı basar: yazıcı hazır olunca gönder, sayfa ve temizlik bitene
+    /// kadar bekle. Hata ya da "yeniden gönder" seçilirse aynı adım tekrar denenir.
+    private func printStep(_ id: UUID) async throws {
+        guard let step = queue?.step(id) else { return }
+        let pageNumber = step.pageNumber
+        
+        currentStepID = id
+        currentPage = pageNumber
+        queue?.setState(.printing, for: id)
+        isCleaningPhase = false
+        progress = 0
+        // Önceki sayfaya yapılan müdahale artık geri alınamaz
+        undoSnapshot = nil
+        canUndoIntervention = false
+        
+        pageLoop: while !isCancelled {
+            // 0) Yazıcı hata bildiriyorsa gönderme (kuyruk şişmesin); akıllı modda
+            //    önceki iş bitip yazıcı "Hazır" olana kadar da bekle
+            guard await waitUntilPrinterAccepts(pageNumber: pageNumber) else { break pageLoop }
+            
+            // 1) Gönder
+            var didSend = false
+            do {
+                didSend = try await sendPage(at: step.pageIndex)
+                if didSend {
+                    sentStepIDs.insert(id)
+                    addLog("✓ Sayfa \(pageNumber) (\(step.side.title.lowercased(with: Locale(identifier: "tr")))) yazıcıya gönderildi")
                 }
-                
-                // Sabit süre: son sayfadan sonra beklemeye gerek yok
-                if index < pageIndices.count - 1 {
-                    addLog("Sayfa \(pageNumber) basılıyor, bekleniyor...")
-                    await waitWithProgress(duration: printDelay, phase: .printing)
-                    
-                    guard !isCancelled else { break pageLoop }
-                    
-                    // 3) Temizlik beklemesi
-                    isCleaningPhase = true
-                    addLog("Belt temizleme bekleniyor...")
-                    await waitWithProgress(duration: cleanDelay, phase: .cleaning)
+            } catch {
+                addLog("❌ Sayfa \(pageNumber) gönderilemedi: \(error.localizedDescription)")
+                switch await ask(.sendFailed(page: pageNumber, error: error)) {
+                case .proceed:
+                    continue pageLoop
+                case .alternate:
+                    addLog("Sayfa \(pageNumber) atlandı")
+                    queue?.setState(.skipped, for: id, note: "Atlandı")
+                case .cancel:
+                    if !isCancelled {
+                        cancel()
+                    }
                 }
                 break pageLoop
             }
+            
+            // Sayfa atlandıysa kağıt geçmedi, beklemeye gerek yok
+            guard didSend, !isCancelled else {
+                if !didSend && !isCancelled {
+                    queue?.setState(.skipped, for: id, note: "Atlandı")
+                }
+                break pageLoop
+            }
+            
+            // 2) Bekle: sayfa basılsın, kayış temizlensin
+            if usesSmartTiming {
+                switch await waitForPageCycle(pageNumber: pageNumber) {
+                case .done, .cancelled:
+                    break pageLoop
+                case .resend:
+                    addLog("Sayfa \(pageNumber) yeniden gönderiliyor")
+                    continue pageLoop
+                }
+            }
+            
+            // Sabit süre: geçişin son sayfasından sonra beklemeye gerek yok
+            // (kağıt çevirme ya da iş sonu)
+            if queue?.hasPending(inPass: step.pass) == true {
+                addLog("Sayfa \(pageNumber) basılıyor, \(Int(pageWait)) sn bekleniyor...")
+                await waitWithProgress(duration: pageWait, phase: .printing)
+            }
+            break pageLoop
+        }
+        
+        if sentStepIDs.contains(id) {
+            queue?.finishPrinting(id)
         }
     }
     
@@ -362,7 +451,7 @@ class PrintManager: ObservableObject {
             guard let status = await fetchPrinterStatus() else {
                 // Durum okunamıyor: sabit süreye geri dön
                 addLog("⚠️ Yazıcı durumu okunamadı; sabit süreyle bekleniyor")
-                await waitWithProgress(duration: max(printDelay + cleanDelay - elapsed, 0), phase: .printing)
+                await waitWithProgress(duration: max(pageWait - elapsed, 0), phase: .printing)
                 return .done
             }
             
@@ -422,12 +511,7 @@ class PrintManager: ObservableObject {
         addLog("Sayfa \(pageNumber) basıldı, kayış temizlendi: \(Int(duration.rounded())) sn")
         progress = 1
         timeRemaining = 0
-        
-        if extraWait > 0 {
-            isCleaningPhase = true
-            await waitWithProgress(duration: extraWait, phase: .cleaning)
-        }
-        return isCancelled ? .cancelled : .done
+        return .done
     }
     
     /// Sayfayı seçili sürücüyle gönderir; gönderilmediyse (atlandı / iptal) false
@@ -481,6 +565,18 @@ class PrintManager: ObservableObject {
     }
     
     private func cleanup() async {
+        // İptalde gönderilmiş sayfa basılmış sayılır; gönderilmemişler atlanmış
+        if let id = currentStepID {
+            if sentStepIDs.contains(id) {
+                queue?.finishPrinting(id)
+            } else if queue?.step(id)?.state == .printing {
+                queue?.setState(.skipped, for: id, note: "İptal edildi")
+            }
+        }
+        currentStepID = nil
+        canUndoIntervention = false
+        undoSnapshot = nil
+        
         isPrinting = false
         isPaused = false
         currentPage = nil
@@ -821,10 +917,10 @@ struct PrintPrompt: Identifiable {
             title: "Ghostscript bulunamadı",
             message: """
             Kendi sürücü sayfaları Ghostscript ile hazırlar. \(location)
-
+            
             Kurmak için Terminal'de şu komutu çalıştırın:
             brew install ghostscript
-
+            
             Homebrew yoksa önce brew.sh adresindeki kurulum komutunu çalıştırın. \
             Ghostscript başka bir yerdeyse yolunu Ayarlar'a (⌘,) girin. \
             Geçici olarak "Sistem sürücüsü" moduna da geçebilirsiniz.
@@ -860,7 +956,7 @@ struct PrintPrompt: Identifiable {
             title: "Yazıcı kuyruğu durdurulmuş",
             message: """
             '\(queue)' kuyruğu durdurulmuş ya da iş kabul etmiyor.
-
+            
             Sistem Ayarları > Yazıcılar ve Tarayıcılar > Yazdırma Sırası'nı açıp "Sürdür" deyin \
             ya da Terminal'de: cupsenable \(queue) && cupsaccept \(queue)
             """,
@@ -874,7 +970,7 @@ struct PrintPrompt: Identifiable {
             message: """
             Kendi sürücü yalnızca Samsung CLP-300'ün anladığı veriyi üretir. \
             Seçili kuyruk: \(status.queue) (\(status.makeAndModel), \(status.deviceURI)).
-
+            
             Başka bir yazıcıya gönderilirse anlamsız sayfalar basılabilir.
             """,
             actions: [
@@ -890,7 +986,7 @@ struct PrintPrompt: Identifiable {
             message: """
             macOS, \(status.queue) yazıcısına ulaşamadığını bildiriyor. Yazıcının açık ve USB \
             kablosunun takılı olduğundan emin olun.
-
+            
             Yine de başlatırsanız sayfalar yazıcı açılana kadar kuyrukta bekler.
             """,
             actions: [
@@ -905,13 +1001,26 @@ struct PrintPrompt: Identifiable {
             title: "Yazıcı: \(status.title)",
             message: """
             \(status.advice ?? "Yazıcıyı kontrol edin.")
-
+            
             Başlatırsanız yazdırma duraklatılmış olarak bekler; sorun düzelip Devam'a \
             basana kadar sayfa gönderilmez.
             """,
             actions: [
                 Action(title: "Başlat ve Bekle", choice: .proceed),
                 Action(title: "Vazgeç", choice: .cancel),
+            ]
+        )
+    }
+    
+    static func reprintStart(sheets: Int, duplex: Bool) -> PrintPrompt {
+        PrintPrompt(
+            title: "Bozulan \(sheets) \(duplex ? "kağıt" : "sayfa") yeniden basılacak",
+            message: duplex
+                ? "Tepsiye \(sheets) boş kağıt koyun. Önce ön yüzler basılır, sonra kağıtları çevirmeniz istenir."
+                : "Tepside boş kağıt olduğundan emin olun.",
+            actions: [
+                Action(title: "Başlat", choice: .proceed),
+                Action(title: "Yeniden Basmayı Atla", choice: .cancel),
             ]
         )
     }
@@ -949,7 +1058,7 @@ struct PrintPrompt: Identifiable {
             message: """
             \(status.queue) kuyruğunda bitmemiş \(status.pendingJobs.count) iş var: \
             \(status.pendingJobs.joined(separator: ", ")).
-
+            
             Takılı kalmış olabilirler; yeni sayfalar bunların arkasında bekler. \
             Yazdırma Sırası penceresinden silebilir ya da yazıcıyı kontrol edebilirsiniz.
             """,
@@ -984,7 +1093,7 @@ struct PrintPrompt: Identifiable {
             title: "Sayfa \(page) hazırlanamadı",
             message: """
             \(error.localizedDescription)
-
+            
             Sayfayı atlayıp devam edebilirsiniz. Çift yönlü yazdırmada atlanan sayfa \
             arka yüz sırasını bozar.
             """,

@@ -26,6 +26,8 @@
 		017 /* PrintInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120; };
 		018 /* PrinterStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 121; };
 		019 /* PrinterStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122; };
+		020 /* PrintQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 124; };
+		021 /* PrintQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -53,6 +55,8 @@
 		121 /* PrinterStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrinterStatus.swift; sourceTree = "<group>"; };
 		122 /* PrinterStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrinterStatusView.swift; sourceTree = "<group>"; };
 		123 /* clp300-status.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "clp300-status.c"; sourceTree = "<group>"; };
+		124 /* PrintQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintQueue.swift; sourceTree = "<group>"; };
+		125 /* PrintQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintQueueView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -126,6 +130,7 @@
 				105 /* PrintProgressView.swift */,
 				113 /* DriverSettingsView.swift */,
 				122 /* PrinterStatusView.swift */,
+				125 /* PrintQueueView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -148,6 +153,7 @@
 			isa = PBXGroup;
 			children = (
 				109 /* SettingsStore.swift */,
+				124 /* PrintQueue.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -308,6 +314,8 @@
 				017 /* PrintInbox.swift in Sources */,
 				018 /* PrinterStatus.swift in Sources */,
 				019 /* PrinterStatusView.swift in Sources */,
+				020 /* PrintQueue.swift in Sources */,
+				021 /* PrintQueueView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

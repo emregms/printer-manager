@@ -21,13 +21,13 @@ struct SettingsView: View {
                         .font(.title2.bold())
                 }
                 .padding(.bottom, 8)
-            
+                
                 // Yazıcı Seçimi
                 VStack(alignment: .leading, spacing: 6) {
                     Label("Yazıcı", systemImage: "printer")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.secondary)
-                
+                    
                     Picker("", selection: $settingsStore.selectedPrinter) {
                         Text("Seçiniz...").tag(nil as String?)
                         ForEach(availablePrinters, id: \.self) { printer in
@@ -66,85 +66,41 @@ struct SettingsView: View {
                     .disabled(printManager.isPrinting)
                     
                     Text(settingsStore.pageTimingMode == .smart
-                         ? "Her sayfa, yazıcı önceki sayfayı basıp kayışı temizledikten ve \"Hazır\" dedikten sonra gönderilir. Soğukken uzun, ısınınca kısa sürer. Durum okunamazsa aşağıdaki sabit süreler kullanılır."
-                         : "Her sayfadan sonra aşağıdaki süreler kadar beklenir.")
+                         ? "Her sayfa, yazıcı önceki sayfayı basıp kayışı temizledikten ve \"Hazır\" dedikten sonra gönderilir. Soğukken uzun, ısınınca kısa sürer."
+                         : "Her sayfadan sonra aşağıdaki süre kadar beklenir.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 
-                if settingsStore.pageTimingMode == .smart {
+                // Sabit modda tek bekleme süresi (akıllı modda durum okunamazsa yedek)
+                if settingsStore.pageTimingMode == .fixed {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
-                            Label("Ek Bekleme", systemImage: "hourglass")
+                            Label("Bekleme Süresi", systemImage: "clock")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text("\(settingsStore.extraWaitSeconds) sn")
+                            Text("\(settingsStore.pageWaitSeconds) sn")
                                 .font(.subheadline.bold())
                                 .foregroundColor(.accentColor)
                         }
                         
                         Slider(
                             value: Binding(
-                                get: { Double(settingsStore.extraWaitSeconds) },
-                                set: { settingsStore.extraWaitSeconds = Int($0) }
+                                get: { Double(settingsStore.pageWaitSeconds) },
+                                set: { settingsStore.pageWaitSeconds = Int($0) }
                             ),
-                            in: 0...15,
+                            in: 15...90,
                             step: 1
                         )
                         .tint(.accentColor)
+                        .disabled(printManager.isPrinting)
                     }
                 }
                 
-                // Yazdırma Süresi
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Label(settingsStore.pageTimingMode == .smart ? "Yedek Yazdırma Süresi" : "Yazdırma Süresi", systemImage: "clock")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("\(settingsStore.printDelaySeconds) sn")
-                            .font(.subheadline.bold())
-                            .foregroundColor(.accentColor)
-                    }
-                
-                    Slider(
-                        value: Binding(
-                            get: { Double(settingsStore.printDelaySeconds) },
-                            set: { settingsStore.printDelaySeconds = Int($0) }
-                        ),
-                        in: 10...60,
-                        step: 1
-                    )
-                    .tint(.accentColor)
-                }
-            
-                // Temizlik Süresi
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Label(settingsStore.pageTimingMode == .smart ? "Yedek Temizlik Süresi" : "Temizlik Süresi", systemImage: "sparkles")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("\(settingsStore.cleanDelaySeconds) sn")
-                            .font(.subheadline.bold())
-                            .foregroundColor(.orange)
-                    }
-                
-                    Slider(
-                        value: Binding(
-                            get: { Double(settingsStore.cleanDelaySeconds) },
-                            set: { settingsStore.cleanDelaySeconds = Int($0) }
-                        ),
-                        in: 2...15,
-                        step: 1
-                    )
-                    .tint(.orange)
-                }
-            
                 Divider()
-            
+                
                 // Çift Yönlü Yazdırma
                 Toggle(isOn: $settingsStore.duplexEnabled) {
                     Label("Çift Yönlü Yazdırma", systemImage: "rectangle.on.rectangle.angled")
@@ -152,14 +108,14 @@ struct SettingsView: View {
                 }
                 .toggleStyle(.switch)
                 .tint(.green)
-            
+                
                 if settingsStore.duplexEnabled {
                     Text("Önce tek sayfalar (1, 3, 5...) yazdırılır, sonra kağıtları çevirmeniz istenir.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.leading, 4)
                 }
-            
+                
                 // Siyah Beyaz Yazdırma
                 Toggle(isOn: $settingsStore.grayscaleMode) {
                     Label("Siyah Beyaz Yazdırma", systemImage: "circle.lefthalf.filled")
@@ -167,7 +123,7 @@ struct SettingsView: View {
                 }
                 .toggleStyle(.switch)
                 .tint(.gray)
-            
+                
                 if settingsStore.grayscaleMode {
                     Text("Daha hızlı yazdırma için renkli yerine siyah beyaz modu kullanılır.")
                         .font(.caption)
@@ -217,13 +173,13 @@ struct SettingsView: View {
                 }
                 
                 Divider()
-            
+                
                 // PDF Seçimi
                 VStack(alignment: .leading, spacing: 8) {
                     Label("PDF Dosyası", systemImage: "doc.fill")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.secondary)
-                
+                    
                     Button(action: { showFilePicker = true }) {
                         HStack {
                             Image(systemName: "folder")
@@ -233,7 +189,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.bordered)
                     .disabled(printManager.isPrinting)
-                
+                    
                     if let pdf = selectedPDF {
                         HStack {
                             Image(systemName: "doc.text.fill")
@@ -255,7 +211,7 @@ struct SettingsView: View {
                         .cornerRadius(8)
                     }
                 }
-            
+                
                 Spacer()
             }
             .padding()
