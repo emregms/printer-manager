@@ -197,6 +197,7 @@
 				402 /* Resources */,
 				403 /* Build foo2qpdl */,
 				404 /* Build helpers */,
+				405 /* Bundle Ghostscript */,
 			);
 			buildRules = (
 			);
@@ -312,6 +313,34 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"${SRCROOT}/Driver/build-helpers.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		405 /* Bundle Ghostscript */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 0;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/ThirdParty/ghostscript/bundle-helper.sh",
+				"$(SRCROOT)/ThirdParty/ghostscript/bin/gs",
+				"$(SRCROOT)/ThirdParty/ghostscript/COPYING",
+				"$(SRCROOT)/ThirdParty/ghostscript/THIRD-PARTY.txt",
+				"$(SRCROOT)/ThirdParty/ghostscript/SHA256SUMS",
+			);
+			name = "Bundle Ghostscript";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/gs",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ghostscript-COPYING.txt",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ghostscript-THIRD-PARTY.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/sh \"${SRCROOT}/ThirdParty/ghostscript/bundle-helper.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */

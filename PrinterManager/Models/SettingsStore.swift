@@ -40,7 +40,7 @@ class SettingsStore: ObservableObject {
         didSet { save() }
     }
     
-    /// Boşsa otomatik bulunur (Homebrew / MacPorts)
+    /// Boşsa uygulama paketindeki, o yoksa Homebrew / MacPorts'taki kullanılır
     @Published var ghostscriptPath: String = "" {
         didSet { save() }
     }

@@ -10,21 +10,17 @@ struct DriverSettingsView: View {
         Form {
             Section {
                 TextField("Ghostscript (gs)", text: $settingsStore.ghostscriptPath,
-                          prompt: Text("Otomatik: /opt/homebrew/bin/gs"))
+                          prompt: Text("Otomatik: uygulama paketindeki"))
                 TextField("foo2qpdl", text: $settingsStore.foo2qpdlPath,
                           prompt: Text("Otomatik: uygulama paketindeki"))
                 TextField("Ham kuyruk", text: $settingsStore.rawQueueName,
                           prompt: Text("Otomatik: seçili yazıcının kuyruğu"))
                 
                 DriverToolStatusView(status: toolStatus, showPaths: true)
-                
-                if toolStatus?.ghostscriptVersion == nil {
-                    GhostscriptInstallView(onFinished: refresh)
-                }
             } header: {
                 Text("Kendi Sürücü")
             } footer: {
-                Text("Boş bırakılan alanlar otomatik bulunur. Ghostscript sırasıyla /opt/homebrew/bin, /usr/local/bin ve /opt/local/bin içinde aranır.")
+                Text("Boş bırakılan alanlarda uygulamanın içindeki araçlar kullanılır. Ghostscript pakette yoksa sırasıyla /opt/homebrew/bin, /usr/local/bin ve /opt/local/bin içinde aranır.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -41,6 +37,9 @@ struct DriverSettingsView: View {
             
             Section("Lisans") {
                 Text("foo2qpdl, foo2zjs projesinden (Rick Richardson) alınmıştır ve GPL-2.0 lisanslıdır. Uygulama onu ayrı bir program olarak çalıştırır; kaynak kodu ve lisans metni repodaki ThirdParty/foo2qpdl klasöründedir.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text("Ghostscript (Artifex Software) AGPL-3.0 lisanslıdır ve uygulamanın içinde ayrı bir program olarak gelir. Lisans metinleri uygulama paketinin Resources klasöründe; kaynak sürümü, adresi ve derleme betiği repodaki ThirdParty/ghostscript klasöründedir.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -483,130 +482,6 @@ struct PowerSaveSection: View {
     }
 }
 
-/// Ghostscript yoksa Homebrew ile kurar
-struct GhostscriptInstallView: View {
-    let onFinished: () -> Void
-    
-    @State private var isInstalling = false
-    @State private var output: String?
-    
-    private var brew: URL? {
-        ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"]
-            .first(where: { FileManager.default.isExecutableFile(atPath: $0) })
-            .map { URL(fileURLWithPath: $0) }
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let brew = brew {
-                HStack {
-                    Button("Ghostscript'i Kur (Homebrew)") {
-                        install(with: brew)
-                    }
-                    .disabled(isInstalling)
-                    if isInstalling {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Kuruluyor, 1–2 dakika sürebilir...")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            } else {
-                HStack {
-                    Button("Terminal'de Kur (Homebrew + Ghostscript)") {
-                        openInstallerInTerminal()
-                    }
-                    Button("Tekrar Kontrol Et", action: onFinished)
-                }
-                Text("""
-                Homebrew bu Mac'te yok. Düğme Terminal'de resmi Homebrew kurulumunu ve ardından \
-                Ghostscript'i başlatır: Mac şifrenizi sorar, Enter ister ve 5–10 dakika sürer. \
-                "Bitti" yazınca buraya dönüp Tekrar Kontrol Et'e basın.
-                """)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                Link("Homebrew hakkında: brew.sh", destination: URL(string: "https://brew.sh")!)
-                    .font(.caption)
-            }
-            
-            if let output = output {
-                Text(output)
-                    .font(.caption2.monospaced())
-                    .foregroundColor(.secondary)
-                    .lineLimit(4)
-                    .textSelection(.enabled)
-            }
-        }
-    }
-    
-    /// Homebrew yoksa: resmi kurulum betiğini ve Ghostscript'i çalıştıran bir .command
-    /// dosyası yazıp Terminal'de açar (şifre ve onay kullanıcıdan istenir)
-    private func openInstallerInTerminal() {
-        let script = """
-        #!/bin/bash
-        echo "PrinterManager: Homebrew ve Ghostscript kuruluyor."
-        echo "Homebrew kurulumu Mac şifrenizi ve Enter tuşunu isteyebilir."
-        echo
-        if [ ! -x /opt/homebrew/bin/brew ] && [ ! -x /usr/local/bin/brew ]; then
-            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || exit 1
-        fi
-        BREW=/opt/homebrew/bin/brew
-        [ -x "$BREW" ] || BREW=/usr/local/bin/brew
-        "$BREW" install ghostscript || exit 1
-        echo
-        echo "Bitti. PrinterManager'a dönüp Tekrar Kontrol Et'e basın; bu pencereyi kapatabilirsiniz."
-        """
-        let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("PrinterManager")
-        let url = directory.appendingPathComponent("Ghostscript Kur.command")
-        do {
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            try script.write(to: url, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
-            NSWorkspace.shared.open(url)
-        } catch {
-            output = "Kurulum betiği yazılamadı: \(error.localizedDescription)"
-        }
-    }
-    
-    private func install(with brew: URL) {
-        isInstalling = true
-        output = nil
-        Task {
-            let result = await Task.detached { () -> String in
-                let logURL = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("brew-install-ghostscript.log")
-                FileManager.default.createFile(atPath: logURL.path, contents: nil)
-                guard let log = try? FileHandle(forWritingTo: logURL) else { return "Günlük dosyası açılamadı" }
-                defer { try? log.close() }
-                
-                let process = Process()
-                process.executableURL = brew
-                process.arguments = ["install", "ghostscript"]
-                var environment = ProcessInfo.processInfo.environment
-                environment["PATH"] = "\(brew.deletingLastPathComponent().path):/usr/bin:/bin:/usr/sbin:/sbin"
-                process.environment = environment
-                process.standardOutput = log
-                process.standardError = log
-                do {
-                    try process.run()
-                    process.waitUntilExit()
-                } catch {
-                    return "brew çalıştırılamadı: \(error.localizedDescription)"
-                }
-                let text = (try? String(contentsOf: logURL, encoding: .utf8)) ?? ""
-                let tail = text.split(separator: "\n").suffix(3).joined(separator: "\n")
-                return process.terminationStatus == 0 ? "✓ Kuruldu\n\(tail)" : "brew hata verdi (kod \(process.terminationStatus)):\n\(tail)"
-            }.value
-            output = result
-            isInstalling = false
-            onFinished()
-        }
-    }
-}
-
 /// Ghostscript / foo2qpdl hazır mı
 struct DriverToolStatusView: View {
     let status: QPDLToolStatus?
@@ -626,10 +501,10 @@ struct DriverToolStatusView: View {
             )
             
             if let status = status, status.ghostscriptVersion == nil {
-                Text("Kurmak için Terminal'de: brew install ghostscript")
-                    .font(.caption.monospaced())
+                Text("Uygulamanın içindeki Ghostscript çalışmadı. Ayarlar'da (⌘,) Ghostscript yolu girildiyse silin; girilmediyse PrinterManager'ı yeniden indirip kurun.")
+                    .font(.caption)
                     .foregroundColor(.orange)
-                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
