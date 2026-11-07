@@ -47,15 +47,21 @@ struct PrinterStatus: Equatable {
         code[0] & 0x08 != 0
     }
     
+    /// Uykudayken USB kimliği hep STATUS:BUSY der; o zaman BUSY iş demek değildir
+    var isSleeping: Bool {
+        code[1] == 0x01 && code[2] == 0x03
+    }
+    
     /// Hazır ya da güç tasarrufunda, iş yok, hata yok: sonraki sayfa gönderilebilir
     var isIdle: Bool {
-        !blocksPrinting && !hasJob && code[1] == 0x01 && (code[2] == 0x01 || code[2] == 0x03)
-            && deviceState != "BUSY"
+        guard !blocksPrinting, !hasJob else { return false }
+        return isSleeping || (code[1] == 0x01 && code[2] == 0x01 && deviceState != "BUSY")
     }
     
     /// Isınıyor, yazdırıyor ya da meşgul: sayfa üzerinde çalışıyor
     var isWorking: Bool {
-        hasJob || deviceState == "BUSY" || (code[1] == 0x01 && [0x04, 0x05, 0x08].contains(code[2]))
+        hasJob || (deviceState == "BUSY" && !isSleeping)
+            || (code[1] == 0x01 && [0x04, 0x05, 0x08].contains(code[2]))
     }
     
     var codeText: String {
