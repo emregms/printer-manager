@@ -676,10 +676,18 @@ extension PrintManager {
             sheetCount += 1
         }
         
-        addLog("Kalite: \(settings.resolution.title), \(isGrayscale ? "siyah-beyaz" : "renkli")")
+        var colorTables: PrinterColorTables?
+        if settings.photoMode {
+            colorTables = PrinterColorTables.find()
+            if colorTables == nil {
+                addLog("⚠️ Fotoğraf modu: Samsung renk tabloları bulunamadı (\(PrinterColorTables.directory.path)); standart renkle basılıyor")
+            }
+        }
+        
+        addLog("Kalite: \(settings.resolution.title), \(isGrayscale ? "siyah-beyaz" : "renkli")\(colorTables != nil ? ", fotoğraf modu" : "")")
         
         return OwnDriverJob(
-            driver: QPDLDriver(tools: QPDLTools(ghostscript: ghostscript, foo2qpdl: foo2qpdl)),
+            driver: QPDLDriver(tools: QPDLTools(ghostscript: ghostscript, foo2qpdl: foo2qpdl, colorTables: colorTables)),
             pdf: source,
             title: pdf.deletingPathExtension().lastPathComponent,
             pageCount: pageCount,

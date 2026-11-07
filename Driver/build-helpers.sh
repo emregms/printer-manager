@@ -3,6 +3,7 @@
 # Contents/Helpers klasörüne derler ve uygulamanın kimliğiyle imzalar:
 #   cups-jobs       başka uygulamalardan gelen işleri alır (libcups)
 #   clp300-status   yazıcının durumunu ve tonerlerini USB'den okur (IOKit)
+#   clp300-raster   fotoğraf modu: Samsung'un renk tablosuyla rasteri noktalara çevirir
 set -eu
 
 SRC="${SRCROOT}/Driver"
@@ -27,8 +28,13 @@ xcrun clang ${ARCH_FLAGS} -mmacosx-version-min="${MACOSX_DEPLOYMENT_TARGET}" \
     -o "${HELPERS}/clp300-status" "${SRC}/clp300-status.c" \
     -framework IOKit -framework CoreFoundation
 
+# shellcheck disable=SC2086
+xcrun clang ${ARCH_FLAGS} -mmacosx-version-min="${MACOSX_DEPLOYMENT_TARGET}" \
+    -O2 -Wall \
+    -o "${HELPERS}/clp300-raster" "${SRC}/clp300-raster.c"
+
 if [ "${CODE_SIGNING_ALLOWED:-NO}" = "YES" ] && [ -n "${EXPANDED_CODE_SIGN_IDENTITY:-}" ]; then
-    for helper in cups-jobs clp300-status; do
+    for helper in cups-jobs clp300-status clp300-raster; do
         codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY}" \
             --options runtime --timestamp=none "${HELPERS}/${helper}"
     done

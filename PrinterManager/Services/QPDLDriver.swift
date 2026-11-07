@@ -6,6 +6,10 @@ import Foundation
 /// Parametreler foo2zjs'in `foo2qpdl-wrapper` betiğinin CLP-300 + A4 için ürettiği
 /// komutla aynı (`-z0 -p2`, renkte ICM modu: `bitcmyk` + `-c -B -A`).
 /// Wrapper'ın yarım ton (WTS) önsözü eklenmiyor: Ghostscript 10'da PDF girdide etkisiz.
+///
+/// Fotoğraf modu (`tools.colorTables` varsa): gs sürekli tonlu raster (P6/P5) verir,
+/// `clp300-raster` Samsung'un renk tablosu ve yarım ton matrisleriyle noktalara çevirir,
+/// foo2qpdl `-A -B` olmadan kodlar. gs'nin kendi renk çevrimi ve yarım tonu kullanılmaz.
 struct QPDLDriver {
     let tools: QPDLTools
     
@@ -25,21 +29,27 @@ struct QPDLDriver {
         to output: URL
     ) async throws -> QPDLPage {
         let input = ["-dFirstPage=\(page)", "-dLastPage=\(page)", pdf.path]
-        return try await run(input: input, color: color, resolution: resolution, output: output)
+        return try await run(input: input, color: color, tables: tools.colorTables, resolution: resolution, output: output)
     }
     
     /// Çift yön için boş sayfa (kağıt geçer, toner harcanmaz)
     func renderBlankPage(resolution: QPDLResolution, to output: URL) async throws -> QPDLPage {
-        return try await run(input: ["-c", "showpage"], color: false, resolution: resolution, output: output)
+        return try await run(input: ["-c", "showpage"], color: false, tables: nil, resolution: resolution, output: output)
     }
     
     // MARK: - Private Methods
     
-    private func run(input: [String], color: Bool, resolution: QPDLResolution, output: URL) async throws -> QPDLPage {
+    private func run(
+        input: [String],
+        color: Bool,
+        tables: PrinterColorTables?,
+        resolution: QPDLResolution,
+        output: URL
+    ) async throws -> QPDLPage {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
-                    let page = try runPipeline(input: input, color: color, resolution: resolution, output: output)
+                    let page = try runPipeline(input: input, color: color, tables: tables, resolution: resolution, output: output)
                     continuation.resume(returning: page)
                 } catch {
                     continuation.resume(throwing: error)
@@ -48,25 +58,36 @@ struct QPDLDriver {
         }
     }
     
-    /// gs | foo2qpdl > output
-    private func runPipeline(input: [String], color: Bool, resolution: QPDLResolution, output: URL) throws -> QPDLPage {
+    /// gs | [clp300-raster |] foo2qpdl > output
+    private func runPipeline(
+        input: [String],
+        color: Bool,
+        tables: PrinterColorTables?,
+        resolution: QPDLResolution,
+        output: URL
+    ) throws -> QPDLPage {
         let start = Date()
         let fileManager = FileManager.default
+        let photo = tables != nil
         
         // stderr dosyaya: pipe'ta okunmadan dolarsa süreçler kilitlenebilir
         let gsLogURL = output.appendingPathExtension("gs.log")
+        let rasterLogURL = output.appendingPathExtension("raster.log")
         let foo2qpdlLogURL = output.appendingPathExtension("foo2qpdl.log")
-        for url in [output, gsLogURL, foo2qpdlLogURL] {
+        for url in [output, gsLogURL, rasterLogURL, foo2qpdlLogURL] {
             fileManager.createFile(atPath: url.path, contents: nil)
         }
         let outputHandle = try FileHandle(forWritingTo: output)
         let gsLogHandle = try FileHandle(forWritingTo: gsLogURL)
+        let rasterLogHandle = try FileHandle(forWritingTo: rasterLogURL)
         let foo2qpdlLogHandle = try FileHandle(forWritingTo: foo2qpdlLogURL)
         defer {
             try? outputHandle.close()
             try? gsLogHandle.close()
+            try? rasterLogHandle.close()
             try? foo2qpdlLogHandle.close()
             try? fileManager.removeItem(at: gsLogURL)
+            try? fileManager.removeItem(at: rasterLogURL)
             try? fileManager.removeItem(at: foo2qpdlLogURL)
         }
         
@@ -74,34 +95,56 @@ struct QPDLDriver {
         
         let ghostscript = Process()
         ghostscript.executableURL = tools.ghostscript
-        ghostscript.arguments = ghostscriptArguments(color: color, resolution: resolution) + input
+        ghostscript.arguments = ghostscriptArguments(color: color, photo: photo, resolution: resolution) + input
         ghostscript.standardInput = FileHandle.nullDevice
         ghostscript.standardOutput = raster
         ghostscript.standardError = gsLogHandle
         
         let encoder = Process()
         encoder.executableURL = tools.foo2qpdl
-        encoder.arguments = foo2qpdlArguments(color: color, resolution: resolution)
-        encoder.standardInput = raster
+        encoder.arguments = foo2qpdlArguments(color: color, photo: photo, resolution: resolution)
         encoder.standardOutput = outputHandle
         encoder.standardError = foo2qpdlLogHandle
         
+        // Fotoğraf modu: sürekli tonlu raster Samsung'un tablolarıyla noktalara çevrilir
+        var converter: Process?
+        if let tables = tables {
+            let dots = Pipe()
+            let process = Process()
+            process.executableURL = tables.helper
+            process.arguments = [tables.directory.path, resolution.rawValue]
+            process.standardInput = raster
+            process.standardOutput = dots
+            process.standardError = rasterLogHandle
+            encoder.standardInput = dots
+            converter = process
+        } else {
+            encoder.standardInput = raster
+        }
+        
         try encoder.run()
         do {
+            try converter?.run()
             try ghostscript.run()
         } catch {
+            converter?.terminate()
             encoder.terminate()
             throw error
         }
         
         ghostscript.waitUntilExit()
+        converter?.waitUntilExit()
         encoder.waitUntilExit()
         
         let gsMessages = Self.readLog(gsLogURL)
+        let rasterMessages = Self.readLog(rasterLogURL)
         let foo2qpdlMessages = Self.readLog(foo2qpdlLogURL)
         
         guard ghostscript.terminationStatus == 0 else {
             throw QPDLDriverError.ghostscriptFailed(ghostscript.terminationStatus, gsMessages)
+        }
+        if let converter = converter, converter.terminationStatus != 0 {
+            throw QPDLDriverError.rasterFailed(converter.terminationStatus, rasterMessages)
         }
         guard encoder.terminationStatus == 0 else {
             throw QPDLDriverError.foo2qpdlFailed(encoder.terminationStatus, foo2qpdlMessages)
@@ -116,29 +159,38 @@ struct QPDLDriver {
             url: output,
             byteCount: byteCount,
             duration: Date().timeIntervalSince(start),
-            messages: [gsMessages, foo2qpdlMessages].filter { !$0.isEmpty }.joined(separator: "\n")
+            messages: [gsMessages, rasterMessages, foo2qpdlMessages].filter { !$0.isEmpty }.joined(separator: "\n")
         )
     }
     
-    private func ghostscriptArguments(color: Bool, resolution: QPDLResolution) -> [String] {
+    private func ghostscriptArguments(color: Bool, photo: Bool, resolution: QPDLResolution) -> [String] {
         let geometry = resolution.geometry
-        return [
+        var arguments = [
             "-q", "-dBATCH", "-dSAFER", "-dQUIET", "-dNOPAUSE",
             // Wrapper'daki "|cat 1>&3" hilesinin karşılığı: PS çıktısı rastere karışmasın
             "-sstdout=%stderr",
             "-sPAPERSIZE=a4",
             "-g\(geometry.width)x\(geometry.height)",
             "-r\(resolution.rawValue)",
-            "-sDEVICE=\(color ? "bitcmyk" : "pbmraw")",
-            "-dCOLORSCREEN", "-dMaxBitmap=500000000",
+        ]
+        if photo {
+            // Sürekli tonlu: renk çevrimi ve yarım ton clp300-raster'da. MaxBitmap
+            // verilmez: gs bantlarla çalışır (1200x1200'de ~420 MB yerine ~30 MB bellek).
+            // Küçük görseller sayfaya büyütülürken yumuşatılır, piksel piksel görünmez.
+            arguments += ["-sDEVICE=\(color ? "ppmraw" : "pgmraw")", "-dInterpolateControl=-1"]
+        } else {
+            arguments += ["-sDEVICE=\(color ? "bitcmyk" : "pbmraw")", "-dCOLORSCREEN", "-dMaxBitmap=500000000"]
+        }
+        arguments += [
             // bitcmyk başlıksız: raster boyutu -g ile birebir aynı olmalı.
             // Chromium'un A4'ü (595.92x842.88) ve diğer boyutlar A4'e sığdırılır.
             "-dFIXEDMEDIA", "-dPDFFitPage",
             "-sOutputFile=-",
         ]
+        return arguments
     }
     
-    private func foo2qpdlArguments(color: Bool, resolution: QPDLResolution) -> [String] {
+    private func foo2qpdlArguments(color: Bool, photo: Bool, resolution: QPDLResolution) -> [String] {
         let geometry = resolution.geometry
         let clip = "\(geometry.clipX)x\(geometry.clipY)"
         var arguments = [
@@ -150,7 +202,9 @@ struct QPDLDriver {
             "-z0",  // CLP-300
         ]
         if color {
-            arguments += ["-c", "-B", "-A"]
+            // -A (C+M+Y aynı noktadaysa yalnız siyah) ve -B (siyahın altını boşalt) yazı
+            // için; fotoğrafta gölgeleri griye boğar. Samsung'un tablosu siyahı kendisi ayarlar.
+            arguments += photo ? ["-c"] : ["-c", "-B", "-A"]
         }
         arguments += [
             "-u", clip, "-l", clip,
@@ -198,6 +252,35 @@ enum QPDLResolution: String, CaseIterable, Identifiable {
 struct QPDLTools {
     let ghostscript: URL
     let foo2qpdl: URL
+    /// Fotoğraf modu için; nil ise gs'nin kendi renk çevrimi kullanılır
+    var colorTables: PrinterColorTables?
+}
+
+/// Samsung'un Mac sürücüsünün kurduğu CLP-300 renk tablosu (RGB → CMYK) ve yarım ton
+/// matrisleri. Fotoğraf modu bunlarla basar. Dosyalar repoda ve uygulamada yoktur;
+/// Samsung sürücüsü kuruluysa yerinden okunur (bkz. Driver/clp300-raster.c).
+struct PrinterColorTables {
+    static let directory = URL(fileURLWithPath: "/Library/Printers/Samsung/CLP-300")
+    static var bundledHelper: URL {
+        Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/clp300-raster")
+    }
+    
+    let directory: URL
+    let helper: URL
+    
+    /// Üç çözünürlüğün dosyaları ve yardımcı araç yerindeyse
+    static func find() -> PrinterColorTables? {
+        let fileManager = FileManager.default
+        var files = ["RGB2CMYK_6006001", "RGB2CMYK_12006001", "RGB2CMYK_120012001"]
+        for color in ["Cyan", "Magenta", "Yellow", "Black", "Gray"] {
+            files += ["600", "1200600", "12001200"].map { "\(color)HT_\($0)" }
+        }
+        guard fileManager.isExecutableFile(atPath: bundledHelper.path),
+              files.allSatisfy({ fileManager.isReadableFile(atPath: directory.appendingPathComponent($0).path) }) else {
+            return nil
+        }
+        return PrinterColorTables(directory: directory, helper: bundledHelper)
+    }
 }
 
 struct QPDLPage {
@@ -303,6 +386,7 @@ enum ToolLocator {
 enum QPDLDriverError: LocalizedError {
     case ghostscriptFailed(Int32, String)
     case foo2qpdlFailed(Int32, String)
+    case rasterFailed(Int32, String)
     case emptyOutput
     
     var errorDescription: String? {
@@ -311,6 +395,8 @@ enum QPDLDriverError: LocalizedError {
             return "Ghostscript sayfayı çeviremedi (kod \(status)): \(Self.tail(messages))"
         case .foo2qpdlFailed(let status, let messages):
             return "foo2qpdl yazıcı verisini üretemedi (kod \(status)): \(Self.tail(messages))"
+        case .rasterFailed(let status, let messages):
+            return "Fotoğraf modu renk çevrimi başarısız (kod \(status)): \(Self.tail(messages))"
         case .emptyOutput:
             return "Yazıcı verisi boş çıktı"
         }

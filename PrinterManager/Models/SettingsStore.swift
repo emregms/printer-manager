@@ -27,6 +27,11 @@ class SettingsStore: ObservableObject {
         didSet { save() }
     }
     
+    /// Samsung'un CLP-300 renk tablosu ve yarım ton desenleriyle basar (kendi sürücüde)
+    @Published var photoMode: Bool = false {
+        didSet { save() }
+    }
+    
     @Published var driverMode: DriverMode = .own {
         didSet { save() }
     }
@@ -57,7 +62,8 @@ class SettingsStore: ObservableObject {
             resolution: qpdlResolution,
             ghostscriptPath: ghostscriptPath,
             foo2qpdlPath: foo2qpdlPath,
-            rawQueueName: rawQueueName
+            rawQueueName: rawQueueName,
+            photoMode: photoMode
         )
     }
     
@@ -76,6 +82,7 @@ class SettingsStore: ObservableObject {
         static let pageWaitSeconds = "pageWaitSeconds"
         static let duplexEnabled = "duplexEnabled"
         static let grayscaleMode = "grayscaleMode"
+        static let photoMode = "photoMode"
         static let driverMode = "driverMode"
         static let qpdlResolution = "qpdlResolution"
         static let ghostscriptPath = "ghostscriptPath"
@@ -110,6 +117,7 @@ class SettingsStore: ObservableObject {
         
         duplexEnabled = defaults.bool(forKey: Keys.duplexEnabled)
         grayscaleMode = defaults.bool(forKey: Keys.grayscaleMode)
+        photoMode = defaults.bool(forKey: Keys.photoMode)
         
         driverMode = defaults.string(forKey: Keys.driverMode).flatMap(DriverMode.init(rawValue:)) ?? .own
         qpdlResolution = defaults.string(forKey: Keys.qpdlResolution).flatMap(QPDLResolution.init(rawValue:)) ?? .dpi1200x600
@@ -126,6 +134,7 @@ class SettingsStore: ObservableObject {
         defaults.set(pageWaitSeconds, forKey: Keys.pageWaitSeconds)
         defaults.set(duplexEnabled, forKey: Keys.duplexEnabled)
         defaults.set(grayscaleMode, forKey: Keys.grayscaleMode)
+        defaults.set(photoMode, forKey: Keys.photoMode)
         defaults.set(driverMode.rawValue, forKey: Keys.driverMode)
         defaults.set(qpdlResolution.rawValue, forKey: Keys.qpdlResolution)
         defaults.set(ghostscriptPath, forKey: Keys.ghostscriptPath)
@@ -178,4 +187,5 @@ struct DriverSettings {
     let ghostscriptPath: String
     let foo2qpdlPath: String
     let rawQueueName: String
+    let photoMode: Bool
 }

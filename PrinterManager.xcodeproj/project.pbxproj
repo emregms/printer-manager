@@ -55,6 +55,7 @@
 		121 /* PrinterStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrinterStatus.swift; sourceTree = "<group>"; };
 		122 /* PrinterStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrinterStatusView.swift; sourceTree = "<group>"; };
 		123 /* clp300-status.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "clp300-status.c"; sourceTree = "<group>"; };
+		126 /* clp300-raster.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "clp300-raster.c"; sourceTree = "<group>"; };
 		124 /* PrintQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintQueue.swift; sourceTree = "<group>"; };
 		125 /* PrintQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintQueueView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -88,6 +89,7 @@
 				118 /* cups-jobs.c */,
 				119 /* build-helpers.sh */,
 				123 /* clp300-status.c */,
+				126 /* clp300-raster.c */,
 			);
 			path = Driver;
 			sourceTree = "<group>";
@@ -279,6 +281,7 @@
 				"$(SRCROOT)/Driver/build-helpers.sh",
 				"$(SRCROOT)/Driver/cups-jobs.c",
 				"$(SRCROOT)/Driver/clp300-status.c",
+				"$(SRCROOT)/Driver/clp300-raster.c",
 			);
 			name = "Build helpers";
 			outputFileListPaths = (
@@ -286,6 +289,7 @@
 			outputPaths = (
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/cups-jobs",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/clp300-status",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/clp300-raster",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

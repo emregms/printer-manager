@@ -8,6 +8,8 @@ struct SettingsView: View {
     
     @State private var availablePrinters: [String] = []
     @State private var toolStatus: QPDLToolStatus?
+    /// Samsung sürücüsünün renk dosyaları (fotoğraf modu) yerinde mi
+    @State private var hasColorTables = PrinterColorTables.find() != nil
     
     var body: some View {
         ScrollView {
@@ -126,6 +128,27 @@ struct SettingsView: View {
                 
                 if settingsStore.grayscaleMode {
                     Text("Daha hızlı yazdırma için renkli yerine siyah beyaz modu kullanılır.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 4)
+                }
+                
+                // Fotoğraf Modu: Samsung'un renk tablosu (yalnızca kendi sürücüde)
+                Toggle(isOn: $settingsStore.photoMode) {
+                    Label("Fotoğraf Modu", systemImage: "photo")
+                        .font(.subheadline.weight(.medium))
+                }
+                .toggleStyle(.switch)
+                .tint(.orange)
+                .disabled(settingsStore.driverMode != .own || !hasColorTables || printManager.isPrinting)
+                
+                if settingsStore.driverMode == .own && !hasColorTables {
+                    Text("Samsung sürücüsünün renk dosyaları bulunamadı (\(PrinterColorTables.directory.path)). Fotoğraf modu için Samsung'un CLP-300 sürücüsü kurulu olmalı.")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                        .padding(.leading, 4)
+                } else if settingsStore.photoMode && settingsStore.driverMode == .own {
+                    Text("Renkler Samsung'un CLP-300 için ayarladığı renk tablosu ve yarım ton desenleriyle çevrilir: gölgeler açılır, renkler doğal çıkar. Fotoğraflar için; 1200x600 dpi önerilir.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.leading, 4)
