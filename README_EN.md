@@ -37,7 +37,10 @@ xattr -cr /Applications/PrinterManager.app
 
 - **Own Driver (Samsung CLP-300)**: Instead of the old Samsung driver in macOS, the app prepares each page itself (Ghostscript + foo2qpdl) and sends it to the printer raw. Dense, colour and vector-heavy pages print reliably
 - **Printer Status and Toner**: The status the printer reports over USB (paper jam, cover open, toner low, waste toner full…) with an explanation, plus each toner's level and cartridge number
-- **Adjustable Delays**: Print and cleaning delays with sliders
+- **Smart Page Pacing**: The next page is sent once the printer has printed the page and cleaned the belt; no fixed delay needed. If status can't be read, a single "Bekleme Süresi" (wait) is used
+- **Print Queue and Double Feeds**: See what is printing now and what comes next; on a double feed, reprint the same page with one click, or reprint spoiled sheets duplex after the series
+- **Fuser and Sleep**: See whether the printer is hot or asleep, and set how many idle minutes before it sleeps
+- **Drag and Drop**: Drag a PDF from Finder onto the window to open it
 - **Page-by-Page Printing**: Each page sent separately to printer
 - **Manual Duplex**: Odd pages → Flip → Even pages reversed
 - **PDF Preview**: Thumbnail grid for all pages
@@ -109,12 +112,25 @@ The parameters are taken verbatim from the `foo2qpdl-wrapper` script of the foo2
 ## Usage
 
 1. **Select Printer** → Choose from dropdown
-2. **Set Delays** → Print (30s) + Cleaning (8s)
+2. **Page Pacing ("Sayfa Geçişi")** → "Akıllı" (smart, recommended). With "Sabit süre" (fixed) you set one wait (default 38 s)
 3. **Driver and Quality** → "Kendi sürücü (önerilen)" (own driver), quality 1200x600 dpi (600 dpi is faster with less data, 1200x1200 is best)
-4. **Select PDF** → Load your file
-5. **Print** → Monitor progress
+4. **Drag or Select a PDF** → Drop the file on the window or pick it in the left panel
+5. **Print** → Follow it in "Baskı Sırası" (print queue)
 
 Advanced settings (⌘, or the button next to the Driver heading): Ghostscript and foo2qpdl paths, raw queue name. Left empty, they are found automatically.
+
+## Print Queue and Double Feeds
+
+When printing starts, the preview switches to **Baskı Sırası** (print queue). Each row is one side of a page (front, back or single): its order, thumbnail and state (queued, printing, printed, spoiled, to reprint, skipped). The bar at the top shows the page printing now and what you can do about it. The "Sayfalar" (pages) tab shows the same in the page grid.
+
+The printer sometimes pulls two sheets at once:
+
+- **While printing fronts or single-sided pages:** **Tekrar Yazdır** (print again) → the same page prints again right after.
+- **While printing backs:** both sheets are ruined. **Çift Kağıt Çekti** (double feed) → this sheet and the next back's sheet are marked spoiled. After the series, spoiled sheets are reprinted duplex: fronts first, then flip and print the backs.
+- **A sheet printed earlier came out bad:** use **Kağıt Bozuk, Sona Ekle** (sheet spoiled, add to end) from that row's menu.
+- **Geri Al** (undo) reverts the last intervention until the next page starts. You are asked before reprints start and can skip them.
+
+In smart mode each page is sent once the printer has printed the previous one, cleaned the belt and is Ready again. A cold printer takes longer for the first page; the remaining time is estimated from the recent pages.
 
 ## Printer Status and Toner
 
@@ -124,11 +140,19 @@ The card at the top of the window reads the printer's own status every 10 second
 - **Toner:** each toner's level and cartridge number (CLP-C300A, CLP-M300A, CLP-Y300A, CLP-K300A). 10% or less is marked "Az" (low).
 - **Details:** raw status code, the printer's own (English) message, USB state and the printer firmware version.
 
-When a print starts, the status and any low toner go to the log. If there is a problem that stops printing (paper jam, cover open, no paper), the app asks first, and while printing it waits before each page until the problem is fixed.
+When a print starts, the status and any low toner go to the log. If there is a problem that stops printing (paper jam, cover open, no paper), the app asks first. If an error occurs while printing, sending stops and no more pages are queued ("Yazıcı Hatası: Duraklatıldı"); once fixed and you press Devam (continue), it goes on, and asks whether to resend a page that may have been cut short.
 
-The status is read with read-only USB control requests: nothing is sent to the printer and CUPS is not disturbed while printing. The codes are decoded with the printer's own status table (SM.xml). The method was taken, for interoperability, from the status monitor in Samsung's Mac driver.
+The status is read with read-only USB control requests: nothing is sent to the printer (except the power-save setting, below) and CUPS is not disturbed while printing. The codes are decoded with the printer's own status table (SM.xml). The method was taken, for interoperability, from the status monitor in Samsung's Mac driver.
 
 Toner cannot be reset: the chip in each cartridge keeps its own level.
+
+### Fuser and Power Save
+
+The CLP-300 keeps its fuser hot after every job and only sleeps when its power-save timer runs out. A chip on the status card shows it: **Fırın sıcak** (hot; uses power while idle, and when the sleep time is known, at most how many minutes until it sleeps), **Fırın ısınıyor** (warming), **Fırın soğuk** (asleep).
+
+To shorten it: Settings (⌘,) → **Yazıcı Güç Tasarrufu**, pick 5–120 min and press **Yazıcıya Uygula** (apply to printer). The printer was set to 10 min; 5 min is the minimum. The value is stored in the printer and **takes effect after the printer is turned off and on**. A sleeping printer wakes by itself when a job arrives; the first page starts a bit later while it warms up.
+
+The setting is read and written with PJL commands over the printer's USB interface. The helper only allows read commands and the two power-save settings. It can't be changed while printing, because the printer is busy.
 
 ## Troubleshooting
 
@@ -144,6 +168,7 @@ The app's messages are in Turkish; the English meaning is given here.
 | Printer prints an `SPL-C ERROR` page | Make sure the driver mode is "Kendi sürücü"; "Sistem sürücüsü" (system driver) causes this error. If it persists, set quality to 600 dpi. |
 | Printing from Safari doesn't open the document in PrinterManager | Is PrinterManager running? Is the printer added by the PrinterManager driver selected in the print dialog? Settings → macOS Sürücüsü should say "Kurulu" (installed); if you installed with an older version, click **Sürücüyü Güncelle** (Update driver). |
 | Print queue shows "PrinterManager açık değil" (not open) | Open PrinterManager; within a few seconds it takes the stopped job and opens the document. |
+| Power-save time did not change | It takes effect when the printer starts: turn it off and on. In Settings, the "Şu an" (current) line should show the new time. |
 | Need details | The print log shows each page's size, time and any Ghostscript warnings. |
 
 The "Sistem sürücüsü" (system driver) mode remains in settings as the old path (splits with PDFKit, sends with `lp`); use it only as a fallback.

@@ -37,7 +37,10 @@ xattr -cr /Applications/PrinterManager.app
 
 - **Kendi Sürücü (Samsung CLP-300)**: macOS'taki eski Samsung sürücüsü yerine sayfaları uygulama kendisi hazırlar (Ghostscript + foo2qpdl) ve yazıcıya ham olarak gönderir. Yoğun, renkli ve vektör ağırlıklı sayfalar da sorunsuz basılır
 - **Yazıcı Durumu ve Toner**: Yazıcının USB'den bildirdiği durum (kağıt sıkışması, kapak açık, toner az, atık toner kabı dolu…) Türkçe açıklamasıyla, dört tonerin yüzdesi ve kartuş numaralarıyla
-- **Ayarlanabilir Bekleme Süreleri**: Yazdırma ve temizlik süreleri slider ile ayarlanır
+- **Akıllı Sayfa Geçişi**: Yazıcı sayfayı basıp kayışı temizleyince sıradaki sayfa gönderilir; sabit süre gerekmez. Durum okunamazsa tek ayarlı "Bekleme Süresi" kullanılır
+- **Baskı Sırası ve Çift Kağıt**: Şu an basılan ve sıradaki sayfalar listede görünür; çift kağıt çekince tek tıkla aynı sayfa tekrar basılır ya da bozulan kağıtlar seri bitince çift yönlü yeniden basılır
+- **Fırın ve Uyku**: Yazıcının sıcak mı uykuda mı olduğu görünür; boşta kaç dakikada uyuyacağı yazıcıya ayarlanır
+- **Sürükle-Bırak**: PDF'yi Finder'dan pencereye sürükleyerek açın
 - **Sayfa Sayfa Yazdırma**: Her sayfa ayrı ayrı yazıcıya gönderilir
 - **Çift Yönlü Yazdırma**: Tek → Çevir → Çift sayfalar ters sırada
 - **PDF Önizleme**: Thumbnail grid ile tüm sayfaları görüntüle
@@ -109,12 +112,25 @@ Parametreler, Linux'ta yıllardır CLP-300 için kullanılan foo2zjs projesinin 
 ## Kullanım
 
 1. **Yazıcı Seçin** → Dropdown'dan yazıcınızı seçin
-2. **Süreleri Ayarlayın** → Yazdırma (30sn) + Temizlik (8sn)
+2. **Sayfa Geçişi** → "Akıllı" (önerilen). "Sabit süre" seçilirse tek bir Bekleme Süresi ayarlanır (varsayılan 38 sn)
 3. **Sürücü ve Kalite** → "Kendi sürücü (önerilen)", kalite 1200x600 dpi (600 dpi daha hızlı ve daha az veri, 1200x1200 en iyi)
-4. **PDF Seçin** → Dosyanızı yükleyin
-5. **Yazdır** → İlerlemeyi izleyin
+4. **PDF'yi Sürükleyin ya da Seçin** → Dosyayı pencereye bırakın ya da sol panelden seçin
+5. **Yazdır** → Baskı Sırası'ndan izleyin
 
 Gelişmiş ayarlar (⌘, ya da Sürücü başlığının yanındaki düğme): Ghostscript ve foo2qpdl yolları, ham gönderim kuyruğu. Boş bırakılırsa otomatik bulunur.
+
+## Baskı Sırası ve Çift Kağıt
+
+Yazdırma başlayınca önizleme **Baskı Sırası**'na geçer. Her satır bir sayfanın bir yüzüdür (ön, arka ya da tek yüz): sırası, küçük resmi ve durumu (sırada, basılıyor, basıldı, bozuk, yeniden basılacak, atlandı) görünür. Üstteki çubuk şu an basılan sayfayı ve o an yapılabilecekleri gösterir. "Sayfalar" sekmesi aynı bilgiyi sayfa ızgarasında gösterir.
+
+Yazıcı bazen iki kağıdı birden çeker:
+
+- **Ön yüz ya da tek yüz basılırken:** **Tekrar Yazdır** → aynı sayfa hemen ardından bir daha basılır.
+- **Arka yüzler basılırken:** iki kağıt da çöp olur. **Çift Kağıt Çekti** → bu kağıt ve sıradaki arka yüzün kağıdı bozuk sayılır. Seri bitince bozulan kağıtlar çift yönlü yeniden basılır: önce ön yüzleri, sonra kağıtları çevirip arka yüzleri.
+- **Daha önce basılmış bir kağıt bozuk çıktıysa:** listede o satırın menüsünden **Kağıt Bozuk, Sona Ekle**.
+- Son müdahale, sonraki sayfa başlayana kadar **Geri Al** ile geri alınır. Yeniden basım başlamadan önce sorulur; istenirse atlanır.
+
+Akıllı modda her sayfa, yazıcı bir öncekini basıp kayışı temizleyip yeniden "Hazır" olunca gönderilir. Soğuk yazıcıda ilk sayfa uzun, ısınınca kısa sürer; kalan süre son sayfaların ortalamasından tahmin edilir.
 
 ## Yazıcı Durumu ve Toner
 
@@ -124,11 +140,19 @@ Pencerenin üstündeki kart, yazıcının kendi bildirdiği durumu 10 saniyede b
 - **Toner:** Dört tonerin yüzdesi ve kartuş numarası (CLP-C300A, CLP-M300A, CLP-Y300A, CLP-K300A). %10 ve altı "Az" olarak işaretlenir.
 - **Ayrıntılar:** Ham durum kodu, yazıcının İngilizce mesajı, USB durumu ve yazıcının ürün yazılımı sürümü.
 
-Yazdırma başlarken durum ve azalan tonerler günlüğe yazılır. Kağıt sıkışması, kapak açık ya da kağıt yok gibi baskıyı durduran bir sorun varsa sorulur; baskı sürerken her sayfadan önce sorunun düzelmesi beklenir.
+Yazdırma başlarken durum ve azalan tonerler günlüğe yazılır. Kağıt sıkışması, kapak açık ya da kağıt yok gibi baskıyı durduran bir sorun varsa sorulur. Baskı sürerken hata olursa gönderim durur ve kuyruğa yeni sayfa eklenmez ("Yazıcı Hatası: Duraklatıldı"); sorun giderilip Devam'a basılınca sürer, sayfa yarım kaldıysa yeniden gönderilip gönderilmeyeceği sorulur.
 
-Durum, yazıcıdan yalnızca okuma yapan USB kontrol istekleriyle alınır. Yazıcıya veri gönderilmez ve yazdırma sürerken CUPS'a karışılmaz. Kodların anlamı yazıcının kendi durum tablosundan (SM.xml) okunur. Bu yöntem, Samsung'un Mac sürücüsündeki durum izleyicisinden birlikte çalışabilirlik için çıkarıldı.
+Durum, yazıcıdan yalnızca okuma yapan USB kontrol istekleriyle alınır. Yazıcıya veri gönderilmez (güç tasarrufu ayarı hariç, aşağıda) ve yazdırma sürerken CUPS'a karışılmaz. Kodların anlamı yazıcının kendi durum tablosundan (SM.xml) okunur. Bu yöntem, Samsung'un Mac sürücüsündeki durum izleyicisinden birlikte çalışabilirlik için çıkarıldı.
 
 Toner sıfırlama yapılamaz: kartuşlardaki çip seviyeyi kendisi tutar.
+
+### Fırın ve Güç Tasarrufu
+
+CLP-300 her işten sonra fırınını (ısıtıcı ünite) sıcak tutar ve ancak güç tasarrufu süresi dolunca uyur. Durum kartındaki çip bunu gösterir: **Fırın sıcak** (boşta enerji harcıyor; süre biliniyorsa en geç kaç dakikada uyuyacağı), **Fırın ısınıyor**, **Fırın soğuk** (uykuda).
+
+Süreyi kısaltmak için Ayarlar (⌘,) → **Yazıcı Güç Tasarrufu**: 5–120 dk arasından seçip **Yazıcıya Uygula**. Yazıcı 10 dk'ya ayarlıydı; en kısa süre 5 dk. Ayar yazıcının belleğine yazılır ve **yazıcı kapatılıp açılınca** geçerli olur. Uyuyan yazıcı iş gelince kendiliğinden uyanır; ilk sayfa ısınma yüzünden biraz geç başlar.
+
+Ayar, yazıcının USB arayüzünden PJL komutlarıyla okunur ve yazılır. Yardımcı araç yalnızca okuma komutlarına ve iki güç tasarrufu ayarına izin verir. Yazdırma sürerken yazıcı meşgul olduğu için ayar yapılamaz.
 
 ## Sorun Giderme
 
@@ -142,6 +166,7 @@ Toner sıfırlama yapılamaz: kartuşlardaki çip seviyeyi kendisi tutar.
 | Yazıcı `SPL-C ERROR` sayfası basıyor | Sürücü modunun "Kendi sürücü" olduğundan emin olun; "Sistem sürücüsü" bu hatayı verir. Devam ederse kaliteyi 600 dpi yapın. |
 | Safari'den yazdırınca belge PrinterManager'da açılmıyor | PrinterManager açık mı? Yazdırma penceresinde PrinterManager sürücüsüyle eklenen yazıcı mı seçili? Ayarlar → macOS Sürücüsü'nde "Kurulu" yazmalı; eski sürümle kurduysanız **Sürücüyü Güncelle** deyin. |
 | Yazdırma Sırası'nda "PrinterManager açık değil" | PrinterManager'ı açın; durdurulan iş birkaç saniye içinde alınır ve belge açılır. |
+| Güç tasarrufu süresi değişmedi | Ayar yazıcı açılırken geçerli olur: yazıcıyı kapatıp açın. Ayarlar'da "Şu an" satırı yeni süreyi göstermeli. |
 | Ayrıntı gerekiyor | Yazdırma Günlüğü her sayfanın boyutunu, süresini ve Ghostscript uyarılarını gösterir. |
 
 "Sistem sürücüsü" modu eski yol olarak ayarlarda duruyor (PDFKit ile bölüp `lp` ile gönderir); yalnızca yedek olarak kullanın.
