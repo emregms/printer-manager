@@ -48,7 +48,7 @@ LİSANSLAR
 PrinterManager MIT lisanslıdır. İçinde ayrı programlar olarak gelenler:
 - Ghostscript $GS_VERSION (Artifex Software), GNU AGPL v3.
   Kaynak: $GS_SOURCE
-  Derleme betiği: https://github.com/emregms/printer-manager/tree/main/ThirdParty/ghostscript
+  Derleme betiği: https://github.com/emregms/printer-manager/tree/v$VERSION/ThirdParty/ghostscript
 - foo2qpdl (foo2zjs, Rick Richardson), GNU GPL v2.
 Lisans metinleri: PrinterManager.app/Contents/Resources/ içindeki *-COPYING.txt ve ghostscript-THIRD-PARTY.txt
 
@@ -66,13 +66,13 @@ INSTALL
    (install driver and add printer; asks for your Mac password). Ghostscript
    comes inside the app; Homebrew and Samsung's old driver are not needed.
 
-Details and troubleshooting: https://github.com/emregms/printer-manager/blob/main/README_EN.md
+Details and troubleshooting: https://github.com/emregms/printer-manager/blob/v$VERSION/README_EN.md
 
 LICENSES
 PrinterManager is MIT licensed. It includes these as separate programs:
 - Ghostscript $GS_VERSION (Artifex Software), GNU AGPL v3.
   Source: $GS_SOURCE
-  Build script: https://github.com/emregms/printer-manager/tree/main/ThirdParty/ghostscript
+  Build script: https://github.com/emregms/printer-manager/tree/v$VERSION/ThirdParty/ghostscript
 - foo2qpdl (foo2zjs, Rick Richardson), GNU GPL v2.
 License texts: *-COPYING.txt and ghostscript-THIRD-PARTY.txt in PrinterManager.app/Contents/Resources/
 EOF
