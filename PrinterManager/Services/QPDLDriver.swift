@@ -172,6 +172,9 @@ struct QPDLDriver {
             "-sPAPERSIZE=a4",
             "-g\(geometry.width)x\(geometry.height)",
             "-r\(resolution.rawValue)",
+            // PDF'e gömülmemiş yazı tipleri (Arial, Georgia...) Mac'tekilerden alınsın.
+            // Homebrew'un gs'si bunları fontconfig ile bulur; paketteki fontconfig'siz.
+            "-sFONTPATH=\(Self.fontPath)",
         ]
         if photo {
             // Sürekli tonlu: renk çevrimi ve yarım ton clp300-raster'da. MaxBitmap
@@ -214,6 +217,14 @@ struct QPDLDriver {
         ]
         return arguments
     }
+    
+    /// fontconfig'in macOS'ta taradığı yazı tipi klasörleri
+    private static let fontPath = [
+        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Fonts").path,
+        "/Library/Fonts",
+        "/System/Library/Fonts/Supplemental",
+        "/System/Library/Fonts",
+    ].joined(separator: ":")
     
     private static func readLog(_ url: URL) -> String {
         let text = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
@@ -333,12 +344,17 @@ struct QPDLToolStatus {
 enum ToolLocator {
     static let searchDirectories = ["/opt/homebrew/bin", "/usr/local/bin", "/opt/local/bin"]
     
+    /// Uygulamayla gelen Ghostscript (bkz. ThirdParty/ghostscript)
+    static var bundledGhostscript: URL {
+        Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/gs")
+    }
+    
     static var bundledFoo2qpdl: URL {
         Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/foo2qpdl")
     }
     
     static func ghostscript(customPath: String) -> URL? {
-        find("gs", customPath: customPath, bundled: nil)
+        find("gs", customPath: customPath, bundled: bundledGhostscript)
     }
     
     static func foo2qpdl(customPath: String) -> URL? {
@@ -369,7 +385,7 @@ enum ToolLocator {
         return line?.isEmpty == false ? line : nil
     }
     
-    private static func find(_ name: String, customPath: String, bundled: URL?) -> URL? {
+    private static func find(_ name: String, customPath: String, bundled: URL) -> URL? {
         let fileManager = FileManager.default
         let custom = customPath.trimmingCharacters(in: .whitespacesAndNewlines)
         
@@ -378,11 +394,7 @@ enum ToolLocator {
             return fileManager.isExecutableFile(atPath: custom) ? URL(fileURLWithPath: custom) : nil
         }
         
-        var candidates: [String] = []
-        if let bundled = bundled {
-            candidates.append(bundled.path)
-        }
-        candidates += searchDirectories.map { "\($0)/\(name)" }
+        let candidates = [bundled.path] + searchDirectories.map { "\($0)/\(name)" }
         
         return candidates
             .first(where: { fileManager.isExecutableFile(atPath: $0) })

@@ -613,12 +613,7 @@ extension PrintManager {
         guard let ghostscript = ToolLocator.ghostscript(customPath: settings.ghostscriptPath),
               let ghostscriptVersion = ToolLocator.version(of: ghostscript, argument: "--version") else {
             addLog("❌ Ghostscript bulunamadı")
-            let choice = await ask(.missingGhostscript(customPath: settings.ghostscriptPath))
-            if choice == .alternate {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString("brew install ghostscript", forType: .string)
-                addLog("Komut panoya kopyalandı: brew install ghostscript")
-            }
+            _ = await ask(.missingGhostscript(customPath: settings.ghostscriptPath))
             return nil
         }
         guard let foo2qpdl = ToolLocator.foo2qpdl(customPath: settings.foo2qpdlPath),
@@ -969,25 +964,13 @@ struct PrintPrompt: Identifiable {
     let actions: [Action]
     
     static func missingGhostscript(customPath: String) -> PrintPrompt {
-        let location = customPath.isEmpty
-            ? "Şu klasörlerde arandı: \(ToolLocator.searchDirectories.joined(separator: ", "))."
-            : "Ayarlardaki yol çalışmıyor: \(customPath)"
+        let detail = customPath.isEmpty
+            ? "Uygulama paketinde olması gerekiyordu (Contents/Helpers/gs). Uygulamayı yeniden indirip kurun."
+            : "Ayarlardaki yol çalışmıyor: \(customPath). Yolu düzeltin ya da boş bırakın (paketteki kullanılır)."
         return PrintPrompt(
             title: "Ghostscript bulunamadı",
-            message: """
-            Kendi sürücü sayfaları Ghostscript ile hazırlar. \(location)
-            
-            Kurmak için Terminal'de şu komutu çalıştırın:
-            brew install ghostscript
-            
-            Homebrew yoksa önce brew.sh adresindeki kurulum komutunu çalıştırın. \
-            Ghostscript başka bir yerdeyse yolunu Ayarlar'a (⌘,) girin. \
-            Geçici olarak "Sistem sürücüsü" moduna da geçebilirsiniz.
-            """,
-            actions: [
-                Action(title: "Komutu Kopyala", choice: .alternate),
-                Action(title: "Tamam", choice: .cancel),
-            ]
+            message: "Kendi sürücü sayfaları Ghostscript ile hazırlar. \(detail)",
+            actions: [Action(title: "Tamam", choice: .cancel)]
         )
     }
     

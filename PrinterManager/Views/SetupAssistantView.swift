@@ -16,13 +16,10 @@ struct SetupAssistantView: View {
             Form {
                 Section {
                     DriverToolStatusView(status: toolStatus)
-                    if toolStatus != nil && toolStatus?.ghostscriptVersion == nil {
-                        GhostscriptInstallView(onFinished: refresh)
-                    }
                 } header: {
-                    Text("1. Ghostscript")
+                    Text("1. Yazdırma Araçları")
                 } footer: {
-                    Text("Sayfaları yazıcının noktalarına çeviren açık kaynak program; bir kez kurulur. foo2qpdl ayrıca kurulmaz, uygulamanın içinde gelir.")
+                    Text("Sayfaları yazıcının noktalarına çeviren açık kaynak programlar (Ghostscript ve foo2qpdl) uygulamanın içinde gelir; ayrıca bir şey kurmanız gerekmez.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
