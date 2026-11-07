@@ -28,6 +28,9 @@ struct ContentView: View {
             
             // Sağ Panel - PDF Önizleme ve Durum
             VStack(spacing: 0) {
+                // Yazıcının kendi bildirdiği durum ve toner seviyeleri
+                PrinterStatusView()
+                
                 if printManager.isPrinting {
                     PrintProgressView()
                         .transition(.opacity)

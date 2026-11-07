@@ -396,6 +396,14 @@ extension PrintManager {
         }
         addLog("✓ Ham gönderim kuyruğu: \(queue) (\(status.deviceURI))")
         
+        // Yazıcının kendi bildirdiği durum (USB): sıkışma, kapak, kağıt, toner...
+        if let printerStatus = await fetchPrinterStatus() {
+            logPrinterStatus(printerStatus)
+            if printerStatus.blocksPrinting {
+                guard await ask(.printerProblem(printerStatus)) == .proceed else { return nil }
+            }
+        }
+        
         // 3) PDF'in kopyası: gönderim sürerken dosya değişse de etkilenmesin,
         //    gs korumalı klasörlere (Masaüstü, Belgeler) ayrıca erişmek zorunda kalmasın
         let directory = try await PDFProcessor.shared.workingDirectory()
@@ -469,6 +477,10 @@ extension PrintManager {
             }
         }
         
+        // Yazıcı sıkışma / kapak açık / kağıt yok bildiriyorsa düzelmesini bekle
+        await waitForPrinterReady()
+        guard !isCancelled else { return false }
+        
         // Önceki iş takılı kaldıysa (yazıcı kapalı, kağıt bitti...) bitmesini bekle
         await waitForEmptyQueue(job.queue)
         guard !isCancelled else { return false }
@@ -518,6 +530,37 @@ extension PrintManager {
     /// lpoptions/lpstat ~250 ms sürüyor; ana iş parçacığını bekletmesin
     private nonisolated func fetchQueueStatus(_ queue: String) async -> PrinterQueueStatus? {
         PrinterService.shared.queueStatus(queue)
+    }
+    
+    /// Yazıcının USB'den bildirdiği durum; yazıcı bağlı değilse nil
+    private nonisolated func fetchPrinterStatus() async -> PrinterStatus? {
+        try? PrinterStatusReader.read()
+    }
+    
+    /// Yazıcı baskıyı durduran bir hata bildiriyorsa düzelene kadar bekler (iptal edilebilir)
+    private func waitForPrinterReady() async {
+        var loggedKey: String?
+        while !isCancelled {
+            guard let status = await fetchPrinterStatus(), status.blocksPrinting else { return }
+            if status.key != loggedKey {
+                addLog("⏳ Yazıcı: \(status.title). \(status.advice ?? "") Düzelince devam edilecek...")
+                loggedKey = status.key
+            }
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+        }
+    }
+    
+    private func logPrinterStatus(_ status: PrinterStatus) {
+        let icon: String
+        switch status.severity {
+        case .ok: icon = "✓"
+        case .warning: icon = "⚠️"
+        case .error: icon = "❗"
+        }
+        addLog("\(icon) Yazıcı: \(status.title)")
+        for toner in status.toners where toner.isLow && toner.percent != nil {
+            addLog("⚠️ \(toner.color.name) toner az: %\(toner.percent!)\(toner.partNumber.map { " (\($0))" } ?? "")")
+        }
     }
 }
 
@@ -643,6 +686,21 @@ struct PrintPrompt: Identifiable {
             kablosunun takılı olduğundan emin olun.
 
             Yine de başlatırsanız sayfalar yazıcı açılana kadar kuyrukta bekler.
+            """,
+            actions: [
+                Action(title: "Yine de Başlat", choice: .proceed),
+                Action(title: "Vazgeç", choice: .cancel),
+            ]
+        )
+    }
+    
+    static func printerProblem(_ status: PrinterStatus) -> PrintPrompt {
+        PrintPrompt(
+            title: "Yazıcı: \(status.title)",
+            message: """
+            \(status.advice ?? "Yazıcıyı kontrol edin.")
+
+            Yine de başlatırsanız uygulama her sayfadan önce sorunun düzelmesini bekler.
             """,
             actions: [
                 Action(title: "Yine de Başlat", choice: .proceed),

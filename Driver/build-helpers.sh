@@ -1,6 +1,8 @@
 #!/bin/sh
-# Xcode "Build cups-jobs" adımı: CUPS iş yardımcısını uygulama paketine
-# derler (Contents/Helpers/cups-jobs) ve uygulamanın kimliğiyle imzalar.
+# Xcode "Build helpers" adımı: uygulamanın yardımcı araçlarını paketin
+# Contents/Helpers klasörüne derler ve uygulamanın kimliğiyle imzalar:
+#   cups-jobs       başka uygulamalardan gelen işleri alır (libcups)
+#   clp300-status   yazıcının durumunu ve tonerlerini USB'den okur (IOKit)
 set -eu
 
 SRC="${SRCROOT}/Driver"
@@ -19,7 +21,15 @@ xcrun clang ${ARCH_FLAGS} -mmacosx-version-min="${MACOSX_DEPLOYMENT_TARGET}" \
     -O2 -Wall -Wno-deprecated-declarations \
     -o "${HELPERS}/cups-jobs" "${SRC}/cups-jobs.c" -lcups
 
+# shellcheck disable=SC2086
+xcrun clang ${ARCH_FLAGS} -mmacosx-version-min="${MACOSX_DEPLOYMENT_TARGET}" \
+    -O2 -Wall \
+    -o "${HELPERS}/clp300-status" "${SRC}/clp300-status.c" \
+    -framework IOKit -framework CoreFoundation
+
 if [ "${CODE_SIGNING_ALLOWED:-NO}" = "YES" ] && [ -n "${EXPANDED_CODE_SIGN_IDENTITY:-}" ]; then
-    codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY}" \
-        --options runtime --timestamp=none "${HELPERS}/cups-jobs"
+    for helper in cups-jobs clp300-status; do
+        codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY}" \
+            --options runtime --timestamp=none "${HELPERS}/${helper}"
+    done
 fi

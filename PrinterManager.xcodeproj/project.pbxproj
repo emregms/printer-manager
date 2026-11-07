@@ -24,6 +24,8 @@
 		015 /* Samsung-CLP-300-PrinterManager.ppd in Resources */ = {isa = PBXBuildFile; fileRef = 116; };
 		016 /* install-driver.sh in Resources */ = {isa = PBXBuildFile; fileRef = 117; };
 		017 /* PrintInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120; };
+		018 /* PrinterStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 121; };
+		019 /* PrinterStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +50,9 @@
 		118 /* cups-jobs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "cups-jobs.c"; sourceTree = "<group>"; };
 		119 /* build-helpers.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "build-helpers.sh"; sourceTree = "<group>"; };
 		120 /* PrintInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintInbox.swift; sourceTree = "<group>"; };
+		121 /* PrinterStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrinterStatus.swift; sourceTree = "<group>"; };
+		122 /* PrinterStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrinterStatusView.swift; sourceTree = "<group>"; };
+		123 /* clp300-status.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "clp300-status.c"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,6 +83,7 @@
 				117 /* install-driver.sh */,
 				118 /* cups-jobs.c */,
 				119 /* build-helpers.sh */,
+				123 /* clp300-status.c */,
 			);
 			path = Driver;
 			sourceTree = "<group>";
@@ -119,6 +125,7 @@
 				104 /* PDFPreviewView.swift */,
 				105 /* PrintProgressView.swift */,
 				113 /* DriverSettingsView.swift */,
+				122 /* PrinterStatusView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -132,6 +139,7 @@
 				112 /* QPDLDriver.swift */,
 				114 /* DriverInstaller.swift */,
 				120 /* PrintInbox.swift */,
+				121 /* PrinterStatus.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -163,7 +171,7 @@
 				200 /* Frameworks */,
 				402 /* Resources */,
 				403 /* Build foo2qpdl */,
-				404 /* Build cups-jobs */,
+				404 /* Build helpers */,
 			);
 			buildRules = (
 			);
@@ -253,7 +261,7 @@
 			shellScript = "/bin/sh \"${SRCROOT}/ThirdParty/foo2qpdl/build-helper.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		404 /* Build cups-jobs */ = {
+		404 /* Build helpers */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 0;
 			buildActionMask = 2147483647;
@@ -264,12 +272,14 @@
 			inputPaths = (
 				"$(SRCROOT)/Driver/build-helpers.sh",
 				"$(SRCROOT)/Driver/cups-jobs.c",
+				"$(SRCROOT)/Driver/clp300-status.c",
 			);
-			name = "Build cups-jobs";
+			name = "Build helpers";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/cups-jobs",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/clp300-status",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -296,6 +306,8 @@
 				012 /* DriverSettingsView.swift in Sources */,
 				013 /* DriverInstaller.swift in Sources */,
 				017 /* PrintInbox.swift in Sources */,
+				018 /* PrinterStatus.swift in Sources */,
+				019 /* PrinterStatusView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
